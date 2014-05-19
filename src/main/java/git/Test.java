@@ -1,7 +1,7 @@
 package git;
 
-import clojure.lang.RT;
-import clojure.lang.Var;
+import clojure.lang.*;
+import com.zoowii.mvc.DispatcherServlet;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.AbstractHandler;
@@ -80,7 +80,16 @@ public class Test {
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             try {
+//                clojure.lang.Compiler.loadFile("test/hello");
+                RT.loadResourceScript("test/hello.clj");
+//                RT.load("test/hello");
+//                Var reload = RT.var("test.hello", "reload");
+//                reload.invoke();
+//                Var unload = RT.var("test.hello", "really-unload-namespace");
+//                unload.invoke(Namespace.find(Symbol.intern("test.hello")));
                 RT.load("test/hello");
+                Var reload = RT.var("test.hello", "reload-dummy");
+                reload.invoke();
                 Var sayHi = RT.var("test.hello", "say-hi");
                 Object result = sayHi.invoke("zoowii");
                 response.getWriter().append(result.toString());
@@ -100,10 +109,11 @@ public class Test {
         context.addServlet(new ServletHolder(new AsyncTestServlet()), "/async");
         context.addServlet(new ServletHolder(new HelloServlet()), "/hello");
         context.addServlet(new ServletHolder(new ClojureTestHandler()), "/clojure");
-        context.addServlet(new ServletHolder(new GitDispatcher()), "/git/.*");
-        context.addServlet(new ServletHolder(new GitHeaderHandler()), "/git/(.+?)/(.+?)/HEAD");
+        context.addServlet(new ServletHolder(new GitDispatcher()), "/git/*");
+        context.addServlet(new ServletHolder(new DispatcherServlet()), "/*");
         try {
             server.start();
+            System.out.println("server at http://localhost:8080/");
             server.join();
         } catch (Exception e) {
             e.printStackTrace();
