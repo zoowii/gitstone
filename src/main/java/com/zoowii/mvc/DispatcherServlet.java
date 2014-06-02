@@ -8,7 +8,6 @@ import com.zoowii.mvc.http.HttpRouter;
 import com.zoowii.mvc.util.RouterLoader;
 
 import javax.servlet.ServletException;
-import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -18,10 +17,11 @@ public class DispatcherServlet extends HttpServlet {
     @Override
     public void service(HttpServletRequest request,
                         HttpServletResponse response) throws ServletException, IOException {
-        HttpRouter.clearRouteTableCache(); // debug
-        RouterLoader.loadRouterFromFile("routes");
+//        HttpRouter.clearRouteTableCache(); // debug
+//        RouterLoader.loadRouterFromFile("routes");
+        RouterLoader.loadRouterFromClojure("gitstone/routes");
         HttpRequest req = new HttpRequest(request);
         HttpResponse res = new HttpResponse(response);
-        HttpRouter.submitRequest(req, res);
+        HttpRouter.submitRequestToAnyRoute(req, res);
     }
 }

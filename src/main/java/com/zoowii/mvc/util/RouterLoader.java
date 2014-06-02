@@ -1,5 +1,6 @@
 package com.zoowii.mvc.util;
 
+import clojure.lang.RT;
 import com.zoowii.mvc.http.HttpRequest;
 import com.zoowii.mvc.http.HttpResponse;
 import com.zoowii.mvc.http.HttpRouter;
@@ -164,4 +165,18 @@ public class RouterLoader {
             }
         }
     }
+
+    public static void loadRouterFromClojure(String path) throws IOException {
+        if (HttpRouter.isAnyRouteTableInited()) {
+            return;
+        }
+        try {
+            RT.load(path);
+            HttpRouter.setAnyRouteTable((clojure.lang.ISeq) RT.var(path.replace("/", "."), "routes").get());
+            HttpRouter.setFindAnyRouteFn(RT.var(path.replace("/", "."), "find-route"));
+        } catch (ClassNotFoundException e) {
+            throw new IOException(e);
+        }
+    }
+
 }

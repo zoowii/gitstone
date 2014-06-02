@@ -1,6 +1,6 @@
 import com.zoowii.mvc.handlers
 
-GET     /static/*   StaticFileHandler handleStaticFile
+GET     /static/:*path   StaticFileHandler handleStaticFile
 GET     /   TestHandler index
 
 GET     /

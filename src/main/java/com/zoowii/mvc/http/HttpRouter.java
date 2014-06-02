@@ -1,6 +1,8 @@
 package com.zoowii.mvc.http;
 
+import clojure.lang.*;
 import com.zoowii.mvc.handlers.RouterNotFoundException;
+import com.zoowii.mvc.util.Pair;
 import com.zoowii.mvc.util.RouterLoader;
 
 import java.io.IOException;
@@ -8,10 +10,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 public class HttpRouter {
     private static String contextPath = null;  // the app context
+    private static Logger logger = Logger.getLogger("HttpRouter");
 
     private static RouterHandlerInfo web404Handler = DefaultConfig.getDefaultWeb404HandlerInfo();
 
@@ -54,6 +58,20 @@ public class HttpRouter {
     }
 
     private static List<RouterHandlerInfo> routeTable = null;
+    private static ISeq routesTable = null;
+    private static Var findRouteFn = null;
+
+    public static boolean isAnyRouteTableInited() {
+        return routesTable != null;
+    }
+
+    public static void setAnyRouteTable(ISeq _routesTable) {
+        routesTable = _routesTable;
+    }
+
+    public static void setFindAnyRouteFn(Var _findRouteFn) {
+        findRouteFn = _findRouteFn;
+    }
 
     /**
      * 清空路由表，主要调试时使用，从而每次请求都重新加载路由表
@@ -118,5 +136,38 @@ public class HttpRouter {
             e.printStackTrace();
         }
 //        throw new RouterNotFoundException(pathInfo);
+    }
+
+    public static void submitRequestToAnyRoute(HttpRequest request, HttpResponse response) {
+        if (contextPath == null) {
+            contextPath = request.getHttpServletRequest().getContextPath();
+        }
+        String pathInfo = request.getHttpServletRequest().getPathInfo();
+        pathInfo = pathInfo.substring(pathInfo.indexOf(getContextPath()), pathInfo.length());
+        String requestMethod = request.getHttpServletRequest().getMethod().toUpperCase();
+        Keyword reqMethodKeyword = Keyword.intern(requestMethod);
+        try {
+            PersistentArrayMap routeResult = (PersistentArrayMap) findRouteFn.invoke(routesTable, reqMethodKeyword, pathInfo);
+            if (routeResult == null) {
+                response.append("404");
+                return;
+            }
+            logger.info(routeResult.toString());
+            ISeq bindings = (ISeq) routeResult.get(Keyword.intern("binding"));
+            while (bindings != null && bindings.count() > 0) {
+                PersistentVector binding = (PersistentVector) bindings.first();
+                bindings = bindings.next();
+                String paramName = (String) binding.get(0);
+                Object paramValue = binding.get(1);
+                request.getParams().add(new Pair<String, Object>(paramName, paramValue));
+            }
+            PersistentVector handlerArray = (PersistentVector) routeResult.get(Keyword.intern("handler"));
+            Class handlerClass = (Class) handlerArray.get(0);
+            String methodName = (String) handlerArray.get(1);
+            Method handlerMethod = handlerClass.getDeclaredMethod(methodName, HttpRequest.class, HttpResponse.class);
+            handlerMethod.invoke(handlerClass, request, response);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

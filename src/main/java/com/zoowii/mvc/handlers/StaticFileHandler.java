@@ -6,12 +6,12 @@ import com.zoowii.mvc.util.ResourceUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
 
 public class StaticFileHandler extends AbstractHandler {
     public static void handleStaticFile(HttpRequest request, HttpResponse response) throws RouterNotFoundException, IOException {
         InputStream inputStream = ResourceUtil.readResourceInWar(request.getHttpServletRequest().getPathInfo());
         if (inputStream == null) {
+            response.append("Can't find static file " + request.getHttpServletRequest().getPathInfo());
             throw new RouterNotFoundException(request.getHttpServletRequest().getPathInfo());
         }
         // TODO: change to async or NIO, or just send by 1024bytes/4096bytes buffer
