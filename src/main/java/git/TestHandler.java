@@ -40,7 +40,7 @@ public class TestHandler {
         out.flush();
 
         // 在子线程中执行业务调用，并由其负责输出响应，主线程退出
-        AsyncContext ctx = request.getHttpServletRequest().startAsync();
+        AsyncContext ctx = request.startAsync();
         new Thread(new BusinessExecutor(ctx)).start();
 
         out.println("结束 Servlet 的时间：" + new Date() + "<br/>");

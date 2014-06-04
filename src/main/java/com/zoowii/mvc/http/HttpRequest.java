@@ -2,6 +2,7 @@ package com.zoowii.mvc.http;
 
 import com.zoowii.mvc.util.Pair;
 
+import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,5 +43,16 @@ public class HttpRequest {
 
     public void setHttpServletRequest(HttpServletRequest httpServletRequest) {
         this.httpServletRequest = httpServletRequest;
+    }
+
+    public AsyncContext startAsync() {
+        return this.getHttpServletRequest().startAsync();
+    }
+
+    /**
+     * get parameter from query string
+     */
+    public String getParameter(String name) {
+        return getHttpServletRequest().getParameter(name);
     }
 }

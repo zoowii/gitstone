@@ -7,7 +7,7 @@ import java.io.IOException;
 
 public class TestHandler extends AbstractHandler {
     public static void index(HttpRequest request, HttpResponse response) throws IOException {
-        response.getHttpServletResponse().getWriter().append("hello, test mvc with jrebel");
+        response.getHttpServletResponse().getWriter().append("hello, test zoowii mvc");
     }
 
     public static void page404(HttpRequest request, HttpResponse response) {
