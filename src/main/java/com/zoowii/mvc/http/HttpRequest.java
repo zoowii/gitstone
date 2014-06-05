@@ -61,4 +61,8 @@ public class HttpRequest {
     public InputStream getInputStream() throws IOException {
         return getHttpServletRequest().getInputStream();
     }
+
+    public String getHeader(String name) {
+        return getHttpServletRequest().getHeader(name);
+    }
 }

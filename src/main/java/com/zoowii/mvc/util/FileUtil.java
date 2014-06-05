@@ -1,9 +1,6 @@
 package com.zoowii.mvc.util;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.Date;
 
 public class FileUtil {
@@ -40,6 +37,27 @@ public class FileUtil {
         }
         File file = new File(path);
         return new Date(file.lastModified());
+    }
+
+    public static long writeFullyStream(InputStream inputStream, OutputStream outputStream) throws IOException {
+        byte[] bytes = new byte[8092];
+        long totalSize = 0;
+        while (inputStream != null && inputStream.available() > 0) {
+            int size = inputStream.read(bytes);
+            totalSize += size;
+            outputStream.write(bytes, 0, size);
+        }
+        return totalSize;
+    }
+
+    public static byte[] readFullyInputStream(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        writeFullyStream(inputStream, byteArrayOutputStream);
+        try {
+            return byteArrayOutputStream.toByteArray();
+        } finally {
+            byteArrayOutputStream.close();
+        }
     }
 
     public static class PipeWriteExecutor implements Runnable {
