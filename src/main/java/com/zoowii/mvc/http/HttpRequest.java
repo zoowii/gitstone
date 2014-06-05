@@ -4,6 +4,8 @@ import com.zoowii.mvc.util.Pair;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,5 +56,9 @@ public class HttpRequest {
      */
     public String getParameter(String name) {
         return getHttpServletRequest().getParameter(name);
+    }
+
+    public InputStream getInputStream() throws IOException {
+        return getHttpServletRequest().getInputStream();
     }
 }

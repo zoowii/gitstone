@@ -25,8 +25,8 @@
 
 (def context context-route)
 
-(def git-routes [(ANY "/HEAD" [GitHandler "head"] "git_head")
-                 (ANY "/info/refs" [GitHandler "infoRefs"] "git_info_refs")
+(def git-routes [(GET "/HEAD" [GitHandler "head"] "git_head")
+                 (GET "/info/refs" [GitHandler "infoRefs"] "git_info_refs")
                  (GET "/objects/info/packs" [GitHandler "infoPacks"] "git_info_packs")
                  (GET "/objects/info/:path" [GitHandler "textInfo"] "git_text_info")
                  (GET "/objects/pack/pack-:path.pack" [GitHandler "packFile"] "git_pack_file")
