@@ -21,7 +21,7 @@ public class GitHandler {
     private static final String baseGitRepoPath = "/Users/zoowii/test/git";
     private static final String PLAIN_TEXT_MIME_TYPE = "text/plain";
     private static final String UPLOAD_PACK = "upload-pack";
-    private static final String RECEIVE_PACK = "receive_pack";
+    private static final String RECEIVE_PACK = "receive-pack";
     private static final String PACKET_FLUSH = "0000";
     private static final String basicRealm = "gitstone";
     private static GitService gitService = new GitService();
