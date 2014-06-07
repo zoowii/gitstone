@@ -2,6 +2,7 @@ package com.zoowii.mvc.http;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 
 public class HttpResponse {
@@ -13,6 +14,10 @@ public class HttpResponse {
 
     public HttpServletResponse getHttpServletResponse() {
         return httpServletResponse;
+    }
+
+    public OutputStream getOutputStream() throws IOException {
+        return getHttpServletResponse().getOutputStream();
     }
 
     public void append(CharSequence content) throws IOException {
@@ -50,6 +55,10 @@ public class HttpResponse {
 
     public void write(int c) throws IOException {
         this.getHttpServletResponse().getWriter().write(c);
+    }
+
+    public void redirect(String url) throws IOException {
+        getHttpServletResponse().sendRedirect(url);
     }
 
 }

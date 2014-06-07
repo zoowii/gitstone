@@ -1,8 +1,5 @@
 package com.zoowii.mvc.handlers;
 
-/**
- * Created by zoowii on 13-12-30.
- */
 public class RouterNotFoundException extends Exception {
     private String pathInfo;
 

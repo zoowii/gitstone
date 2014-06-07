@@ -1,8 +1,0 @@
-import com.zoowii.mvc.handlers
-
-GET     /static/:*path   StaticFileHandler handleStaticFile
-GET     /   TestHandler index
-
-GET     /
-
-system  404     TestHandler page404
