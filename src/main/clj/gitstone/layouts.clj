@@ -54,7 +54,7 @@
       [:link {:ref "shortcut icon" :href (img-url "favicon.jpg")}]
       (include-css
         (css-url "bootstrap.min.css")
-        (css-url "bootstrap-theme.min.css")
+        ;(css-url "bootstrap-theme.min.css")
         (css-url "website.css"))
       (include-js
         (js-url "jquery.min.js")

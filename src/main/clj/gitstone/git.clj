@@ -1,8 +1,12 @@
 (ns gitstone.git
   (:import (com.zoowii.gitstone.git GitService GitTreeItem)
            (org.eclipse.jgit.api Git)
-           (org.eclipse.jgit.revwalk RevCommit))
-  (:require [clojure.java.shell :refer [sh]]))
+           (org.eclipse.jgit.revwalk RevCommit)
+           (java.util Date)
+           (org.eclipse.jgit.lib PersonIdent)
+           (com.zoowii.util DateUtil))
+  (:require [clojure.java.shell :refer [sh]]
+            [gitstone.util :as util]))
 
 (defn exec-cmd
   "执行shell命令"
@@ -39,6 +43,14 @@
 (defn commit-full-msg
   [^RevCommit commit]
   (.getFullMessage commit))
+
+(defn commit-time-str
+  [^RevCommit commit]
+  (let [^PersonIdent ident (commit-author-ident commit)
+        t (.getWhen ident)
+        tz (.getTimeZone ident)
+        fmt "yyyy-MM-dd hh:mm:ss"]
+    (util/format-date t fmt tz)))
 
 (defn object-in-path
   [^GitService git-service

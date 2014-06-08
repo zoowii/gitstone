@@ -15,7 +15,7 @@
   (let [cur-user (web/current-user req)
         limit (.getIntParam req "limit" 10)
         offset (.getIntParam req "offset" 0)
-        limit (if (pos? limit) limit 10)
+        limit (if (pos? limit) limit 100)
         offset (if (>= offset 0) offset 0)
         repos (db/find-repos-of-user cur-user offset limit)]
     (website-layout

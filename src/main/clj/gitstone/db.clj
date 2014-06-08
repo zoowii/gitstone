@@ -84,7 +84,9 @@
            user)
     (let [rs (query
                db-spec
-               ["select * from repository where name = ? and owner_name = ?" name (:username user)])]
+               ["select * from repository where name = ? and owner_name = ?" name (if (string? user)
+                                                                                    user
+                                                                                    (:username user))])]
       (first rs))))
 
 (defn check-username
