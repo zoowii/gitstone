@@ -262,4 +262,19 @@ public class GitService {
         ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
         return byteArrayInputStream;
     }
+
+    /**
+     * 把git repo打包(ZIP)
+     * TODO: 目前只支持对默认分支打包
+     *
+     * @throws IOException
+     */
+    public InputStream archiveGitRepo(Git git, String branchName) throws IOException, GitAPIException {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        git.archive().setOutputStream(byteArrayOutputStream).call();
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+        byteArrayOutputStream.close();
+        return byteArrayInputStream;
+    }
+
 }

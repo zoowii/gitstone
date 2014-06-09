@@ -19,11 +19,7 @@ public class SiteHandler extends BaseHandler {
             RT.load("gitstone/views");
             Var indexPage = RT.var("gitstone.views", "index-page");
             Object res = indexPage.invoke(request, response);
-            if (res != null) {
-                response.append(res.toString());
-            } else {
-                response.append("error");
-            }
+            handleClojureOutput(request, response, res);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -38,11 +34,7 @@ public class SiteHandler extends BaseHandler {
             RT.load("gitstone/views");
             Var indexPage = RT.var("gitstone.views", "new-repo-page");
             Object res = indexPage.invoke(request, response);
-            if (res != null) {
-                response.append(res.toString());
-            } else {
-                response.append("error");
-            }
+            handleClojureOutput(request, response, res);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -57,6 +49,26 @@ public class SiteHandler extends BaseHandler {
             RT.load("gitstone/views");
             Var indexPage = RT.var("gitstone.views", "create-repo");
             indexPage.invoke(request, response);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void profile(HttpRequest request, HttpResponse response) throws IOException {
+        if (currentUsername(request) == null) {
+            response.redirect(HttpRouter.reverseUrl("login_page"));
+            return;
+        }
+        try {
+            RT.load("gitstone/views");
+            Var profilePage = RT.var("gitstone.views", "profile");
+            Object res = profilePage.invoke(request, response);
+            response.setContentType("text/html; charset=UTF-8");
+            if (res != null) {
+                response.append(res.toString());
+            } else {
+                response.append("error");
+            }
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }

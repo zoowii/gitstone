@@ -10,4 +10,9 @@ public class AllPublicGitRepoAccessManager extends AbstractGitRepoAccessManager 
     public boolean hasWriteAccess(String repoPath, String username, String password) {
         return true;
     }
+
+    @Override
+    public boolean hasAdminAccess(String repoPath, String username, String password) {
+        return true;
+    }
 }

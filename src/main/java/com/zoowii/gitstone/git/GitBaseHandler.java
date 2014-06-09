@@ -1,6 +1,10 @@
 package com.zoowii.gitstone.git;
 
+import clojure.java.api.Clojure;
+import clojure.lang.IFn;
+import clojure.lang.RT;
 import com.zoowii.gitstone.Settings;
+import com.zoowii.gitstone.handlers.BaseHandler;
 import com.zoowii.mvc.handlers.AbstractHandler;
 import com.zoowii.mvc.http.HttpRequest;
 import com.zoowii.mvc.http.HttpResponse;
@@ -12,9 +16,9 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class GitBaseHandler extends AbstractHandler {
+public class GitBaseHandler extends BaseHandler {
     private static final Logger logger = Logger.getLogger(GitBaseHandler.class.getName());
-    protected static final String baseGitRepoPath = Settings.getGitRootPath(); //"/Users/zoowii/test/git";
+    protected static final String baseGitRepoPath = Settings.getGitRootPath();
     protected static final String PLAIN_TEXT_MIME_TYPE = "text/plain";
     protected static final String basicRealm = Settings.getBasicRealm();
     protected static GitService gitService = GitService.getInstance();
@@ -38,7 +42,8 @@ public class GitBaseHandler extends AbstractHandler {
 
     protected static final int READ_TYPE = 1;
     protected static final int WRITE_TYPE = 2;
-    protected static final int READ_WRITE_TYPE = 1 | 2;
+    protected static final int ADMIN_TYPE = 4;
+    protected static final int ALL_TYPE = 1 | 2;
 
     protected static boolean checkAuth(HttpRequest request, HttpResponse response, String repoPath, int accessType) throws IOException {
         // TODO: 如果是public的项目,直接返回true,否则要验证
@@ -55,12 +60,15 @@ public class GitBaseHandler extends AbstractHandler {
             }
             String username = userPassArray[0];
             String password = userPassArray[1];
+            // FIXME
             if (READ_TYPE == accessType) {
                 return gitRepoAccessManager.hasReadAccess(repoPath, username, password);
             } else if (WRITE_TYPE == accessType) {
                 return gitRepoAccessManager.hasWriteAccess(repoPath, username, password);
-            } else if (READ_WRITE_TYPE == accessType) {
+            } else if (ALL_TYPE == accessType) {
                 return gitRepoAccessManager.hasAllAccess(repoPath, username, password);
+            } else if (ADMIN_TYPE == accessType) {
+                return gitRepoAccessManager.hasAdminAccess(repoPath, username, password);
             } else {
                 return false;
             }
@@ -103,5 +111,24 @@ public class GitBaseHandler extends AbstractHandler {
         calendar.add(Calendar.SECOND, seconds);
         response.setHeader("Expires", calendar.getTime().toString());
         response.setHeader("Cache-Control", "public, max-age=31536000");
+    }
+
+    protected static boolean canReadRepo(String currentUserName, String repoUserName, String repoName) {
+        try {
+            RT.load("gitstone/user_dao");
+            IFn fn = Clojure.var("gitstone.user-dao", "can-read-repo?");
+            if (fn == null) {
+                logger.info("Can't find can-read-repo?");
+                return false;
+            }
+            Object res = fn.invoke(currentUserName, repoUserName, repoName);
+            return res != null && !(res.equals(false));
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }

@@ -41,8 +41,10 @@
                  (POST "/git-upload-pack" [GitHandler "uploadPack"] "git_upload_pack")
                  (POST "/git-receive-pack" [GitHandler "receivePack"] "git_receive_pack")])
 
-(def git-view-routes [(GET "/tree/:branch" [GitViewHandler "viewPath"] "git_view_branch")
-                      (GET "/tree/view/:branch/:*path" [GitViewHandler "viewPath"] "git_view_path")
+(def git-view-routes [(GET "/branch/:branch" [GitViewHandler "viewPath"] "git_view_branch")
+                      (GET "/view/:branch/:*path" [GitViewHandler "viewPath"] "git_view_path")
+                      (GET "/settings/options" [GitViewHandler "settingsOptions"] "git-settings-options")
+                      (GET "/archive/:branch" [GitViewHandler "archiveRepo"] "git-archive")
                       (GET "" [GitViewHandler "index"] "git_view_index")])
 
 ;; 暂时匿名http路由有BUG
@@ -53,6 +55,7 @@
            (POST "/login" [SiteHandler "login"] "login")
            (ANY "/logout" [SiteHandler "logout"] "logout")
            (GET "/new_repo" [SiteHandler "createRepoPage"] "new-repo-page")
+           (GET "/profile" [SiteHandler "profile"] "profile")
            (POST "/new_repo" [SiteHandler "createRepo"] "new-repo")
            (context "/git/:user/:repo" git-routes)
            (context "/:user/:repo" git-view-routes)         ;; 因为这个路由的关系,上面路由url中开头的单词都不能作为用户名 TODO

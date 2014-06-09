@@ -1,7 +1,8 @@
 (ns gitstone.web
   (:import (com.zoowii.mvc.http HttpRequest HttpResponse HttpRouter)
            (java.util ArrayList))
-  (:require [gitstone.db :as db]))
+  (:require [gitstone.db :as db]
+            [gitstone.util :as util]))
 
 (defn redirect
   [^HttpResponse response url]
@@ -24,3 +25,19 @@
   (let [username (.session req "username")]
     (if username
       (db/find-user-by-username username))))
+
+(defn static-url
+  [path]
+  (HttpRouter/reverseUrl "static-file" (util/jlist* path)))
+
+(defn js-url
+  [path]
+  (static-url (str "js/" path)))
+
+(defn css-url
+  [path]
+  (static-url (str "css/" path)))
+
+(defn img-url
+  [path]
+  (static-url (str "img/" path)))

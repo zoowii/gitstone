@@ -8,7 +8,11 @@ public abstract class AbstractGitRepoAccessManager {
 
     public abstract boolean hasWriteAccess(String repoPath, String username, String password);
 
+    public abstract boolean hasAdminAccess(String repoPath, String username, String password);
+
     public boolean hasAllAccess(String repoPath, String username, String password) {
-        return hasReadAccess(repoPath, username, password) && hasWriteAccess(repoPath, username, password);
+        return hasReadAccess(repoPath, username, password)
+                && hasWriteAccess(repoPath, username, password)
+                && hasAdminAccess(repoPath, username, password);
     }
 }

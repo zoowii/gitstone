@@ -1,6 +1,8 @@
 (ns gitstone.views
-  (:import (com.zoowii.mvc.http HttpRequest HttpResponse))
+  (:import (com.zoowii.mvc.http HttpRequest HttpResponse)
+           (java.util Date))
   (:require [hiccup.core :refer [html]]
+            [hiccup.util :refer [escape-html]]
             [gitstone.git :as ggit]
             [clojure.tools.logging :as logging]
             [gitstone.layouts :refer :all]
@@ -8,7 +10,7 @@
             [gitstone.db :as db]
             [gitstone.user-dao :as user-dao]
             [gitstone.web :as web]
-            [gitstone.util :refer [uuid now-timestamp]]))
+            [gitstone.util :refer [uuid now-timestamp format-date]]))
 
 (defn index-page
   [^HttpRequest req ^HttpResponse res]
@@ -164,3 +166,59 @@
       (do
         (web/login-as-user req user)
         (web/redirect res (web/url-for "index"))))))
+
+(defn profile
+  [^HttpRequest req ^HttpResponse res]
+  (let [cur-user (web/current-user req)
+        repos (db/find-repos-of-user cur-user 0 100)]
+    (website-layout
+      cur-user "profile"
+      (html
+        [:div {:class "row main-content"}
+         [:div {:class "col-sm-4"}
+          [:div {:class "account-image"}
+           [:img {:src   (:image cur-user)
+                  :alt   "..."
+                  :class "img-thumbnail"}]]
+          [:h4 (:username cur-user)]
+          [:span {:class "glyphicon glyphicon-user"}]
+          [:span "Joined @"]
+          [:span (format-date (Date. (:created_time cur-user)))]]
+         [:div {:class "col-sm-8"}
+          [:ul {:class "nav nav-tabs"}
+           [:li {:class "active"}
+            [:a {:href        "#repositories-area"
+                 :data-toggle "tab"}
+             "Repositories"]]
+           [:li
+            [:a {:href        "#profile"
+                 :data-toggle "tab"}
+             "Organizations"]]
+           [:li
+            [:a {:href        "#messages"
+                 :data-toggle "tab"}
+             "Public Activities"]]
+           [:li
+            [:a {:href        "#edit-profile"
+                 :data-toggle "tab"}
+             "Edit Profile"]]]
+          [:div {:class "tab-content"}
+           [:div {:class "tab-pane active"
+                  :id    "repositories-area"}
+            [:ul {:class "list-group"}
+             (for [repo repos]
+               [:li {:class "list-group-item"}
+                [:span {:class "badge"} "Star 0"]
+                [:span {:class "badge"} "Fork 0"]
+                [:a {:href (web/url-for "git_view_index" (:owner_name repo) (:name repo))}
+                 [:h4 (escape-html (:name repo))]]
+                [:pre (escape-html (:description repo))]])]]
+           [:div {:class "tab-pane"
+                  :id    "profile"}
+            "..."]
+           [:div {:class "tab-pane"
+                  :id    "messages"}
+            "..."]
+           [:div {:class "tab-pane"
+                  :id    "edit-profile"}
+            "..."]]]]))))

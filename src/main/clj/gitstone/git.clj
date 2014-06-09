@@ -49,7 +49,7 @@
   (let [^PersonIdent ident (commit-author-ident commit)
         t (.getWhen ident)
         tz (.getTimeZone ident)
-        fmt "yyyy-MM-dd hh:mm:ss"]
+        fmt "yyyy-MM-dd HH:mm:ss"]
     (util/format-date t fmt tz)))
 
 (defn object-in-path

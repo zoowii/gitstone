@@ -1,6 +1,7 @@
 (ns gitstone.util
-  (:import (java.util UUID Date)
-           (com.zoowii.util DateUtil)))
+  (:import (java.util UUID Date ArrayList)
+           (com.zoowii.util DateUtil)
+           (com.zoowii.mvc.http HttpRequest HttpRouter)))
 
 (defn uuid
   []
@@ -18,3 +19,12 @@
    (DateUtil/formatDate date fmt))
   ([date fmt time-zone]
    (DateUtil/formatDate date fmt time-zone)))
+
+
+(defn jlist
+  [col]
+  (ArrayList. (vec col)))
+
+(defn jlist*
+  [& col]
+  (jlist col))
