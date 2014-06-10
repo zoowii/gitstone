@@ -26,7 +26,7 @@
     (html
       [:div {:class "row"}
        [:div {:class "col-sm-8"}
-        [:span {:class (if (:is_private repo)
+        [:span {:class (if (repo-dao/is-repo-private repo)
                          "glyphicon glyphicon-lock"
                          "glyphicon glyphicon-folder-open")}]
         [:a {:href  "#"
@@ -71,13 +71,7 @@
        [:li (if (= active-module "settings")
               {:class "active"}
               {})
-        (link-to (web/url-for "git-settings-options" username repo-name) "Settings")]
-       (if (and cur-user (= (:username cur-user) username))
-         [:li
-          [:button {:class           "btn btn-danger btn-sm delete-repo-btn"
-                    :data-owner-name username
-                    :data-repo-name  repo-name}
-           "Delete"]])])))
+        (link-to (web/url-for "git-settings-options" username repo-name) "Settings")]])))
 
 (defn view-git-nav2-partial
   [req username repo-name cur-branch-name branch-names path]

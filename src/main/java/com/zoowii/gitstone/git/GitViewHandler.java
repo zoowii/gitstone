@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class GitViewHandler extends GitBaseHandler {
@@ -21,7 +22,9 @@ public class GitViewHandler extends GitBaseHandler {
 
     public static void index(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        String repoOwnerName = request.getStringParam("user");
+        String repoName = request.getStringParam("repo");
+        if (!canReadRepo(currentUsername(request), repoOwnerName, repoName)) {
             redirectToLogin(request, response);
             return;
         }
@@ -32,8 +35,16 @@ public class GitViewHandler extends GitBaseHandler {
         }
         try {
             List<String> branchNames = gitService.getBranchNames(git);
-            // TODO: 获取git repo的默认分支(默认是master),如果有,就访问这个分支,否则就访问第一个分支
-            String defaultBranchName = "master"; // 默认分支
+            RT.load("gitstone/repo_dao");
+            IFn getDefaultBranchFn = Clojure.var("gitstone.repo-dao", "default-branch-of-repo-by-name");
+            if (getDefaultBranchFn == null) {
+                response.append("Can't find default-branch-of-repo-by-name");
+                return;
+            }
+            String defaultBranchName = (String) getDefaultBranchFn.invoke(repoOwnerName, repoName); // 默认分支
+            if (defaultBranchName == null) {
+                defaultBranchName = "master";
+            }
             String branchName = defaultBranchName;
             if (branchNames == null || branchNames.size() < 1) {
                 branchName = null;
@@ -44,13 +55,16 @@ public class GitViewHandler extends GitBaseHandler {
             viewPathInGitRepo(request, response, git, branchName, path);
         } catch (GitAPIException e) {
             e.printStackTrace();
+            response.append(e.getMessage());
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            response.append(e.getMessage());
         }
     }
 
     private static void viewPathInGitRepo(HttpRequest request, HttpResponse response, Git git, String currentBranchName, String path) throws IOException {
         String username = request.getStringParam("user");
         String repoName = request.getStringParam("repo");
-        // TODO: 判断权限
         try {
             RT.load("gitstone/git_views");
             Var viewPathFn = RT.var("gitstone.git-views", "view-path");
@@ -93,11 +107,82 @@ public class GitViewHandler extends GitBaseHandler {
         }
     }
 
+    public static void deleteRepo(HttpRequest request, HttpResponse response) throws IOException {
+        String username = request.getStringParam("user");
+        String repoName = request.getStringParam("repo");
+        if (!isOwnerOfRepo(currentUsername(request), username, repoName)) {
+            response.ajaxFail("You are not the owner of this repository");
+            return;
+        }
+        try {
+            RT.load("gitstone/repo_dao");
+            IFn fn = Clojure.var("gitstone.repo-dao", "del-repo-by-name!");
+            if (fn == null) {
+                response.ajaxFail("Can't find del-repo-by-name!");
+                return;
+            }
+            fn.invoke(username, repoName);
+            response.ajaxSuccess(null);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            response.ajaxFail(e.getMessage());
+        }
+    }
+
+    public static void updateSettingsOptions(HttpRequest request, HttpResponse response) throws IOException {
+        String username = request.getStringParam("user");
+        String repoName = request.getStringParam("repo");
+        if (!isOwnerOfRepo(currentUsername(request), username, repoName)) {
+            response.ajaxFail("You are not the owner of this repository");
+            return;
+        }
+        String description = request.getPostParam("description");
+        String defaultBranch = request.getPostParam("default_branch");
+        boolean isPrivate = request.getBoolPostParam("is_private", true);
+        try {
+            RT.load("gitstone/repo_dao");
+            IFn fn = Clojure.var("gitstone.repo-dao", "update-repo-settings!");
+            if (fn == null) {
+                response.ajaxFail("Can't find update-repo-settings!");
+                return;
+            }
+            fn.invoke(username, repoName, description, defaultBranch, isPrivate);
+            response.ajaxSuccess("update repo settings successfully!");
+        } catch (ClassNotFoundException e) {
+            logger.log(Level.SEVERE, e.getMessage());
+            e.printStackTrace();
+            response.ajaxFail(e.getMessage());
+        }
+    }
+
+    public static void settingsDangerZone(HttpRequest request, HttpResponse response) throws IOException {
+        String username = request.getStringParam("user");
+        String repoName = request.getStringParam("repo");
+        if (!canReadRepo(currentUsername(request), username, repoName)) {
+            redirectToLogin(request, response);
+            return;
+        }
+        try {
+            RT.load("gitstone/git_views");
+            IFn fn = Clojure.var("gitstone.git-views", "view-repo-settings-danger-zone");
+            if (fn == null) {
+                response.append("error, load view-repo-settings-danger-zone error");
+                return;
+            }
+            Object res = fn.invoke(request, response, username, repoName);
+            response.setContentType("text/html; charset=UTF-8");
+            handleClojureOutput(request, response, res);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            response.append("error " + e.getMessage());
+        }
+    }
+
     public static void settingsOptions(HttpRequest request, HttpResponse response) throws IOException {
         String username = request.getStringParam("user");
         String repoName = request.getStringParam("repo");
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, ADMIN_TYPE)) {
+        if (!canReadRepo(currentUsername(request), username, repoName)) {
             redirectToLogin(request, response);
             return;
         }
@@ -142,7 +227,9 @@ public class GitViewHandler extends GitBaseHandler {
             path = path.substring(1);
         }
         String branchName = request.getStringParam("branch");
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        String repoOwnerName = request.getStringParam("user");
+        String repoName = request.getStringParam("repo");
+        if (!canReadRepo(currentUsername(request), repoOwnerName, repoName)) {
             redirectToLogin(request, response);
             return;
         }

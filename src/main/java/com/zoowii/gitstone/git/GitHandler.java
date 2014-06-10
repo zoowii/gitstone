@@ -33,7 +33,7 @@ public class GitHandler extends GitBaseHandler {
             sendNotFound(request, response);
             return;
         }
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }
@@ -62,7 +62,7 @@ public class GitHandler extends GitBaseHandler {
 
     public static void head(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }
@@ -89,7 +89,7 @@ public class GitHandler extends GitBaseHandler {
 
     public static void infoRefs(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }
@@ -116,7 +116,7 @@ public class GitHandler extends GitBaseHandler {
 
     public static void idxFile(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }
@@ -127,7 +127,7 @@ public class GitHandler extends GitBaseHandler {
 
     public static void packFile(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }
@@ -138,7 +138,7 @@ public class GitHandler extends GitBaseHandler {
 
     public static void infoPacks(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }
@@ -149,7 +149,7 @@ public class GitHandler extends GitBaseHandler {
 
     public static void textInfo(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }
@@ -160,7 +160,7 @@ public class GitHandler extends GitBaseHandler {
 
     public static void looseObject(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }
@@ -180,7 +180,7 @@ public class GitHandler extends GitBaseHandler {
 
     public static void uploadPack(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, READ_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }
@@ -189,7 +189,7 @@ public class GitHandler extends GitBaseHandler {
 
     public static void receivePack(HttpRequest request, HttpResponse response) throws IOException {
         String repoPath = getGitRepoPath(request);
-        if (!checkAuth(request, response, repoPath, WRITE_TYPE)) {
+        if (!checkBasicAuth(request, response, repoPath, WRITE_TYPE)) {
             sendAuthRequiredOrFailed(request, response);
             return;
         }

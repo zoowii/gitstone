@@ -5,10 +5,14 @@ import clojure.lang.Var;
 import com.google.common.base.Function;
 import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
 import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
+import com.zoowii.gitstone.Settings;
 import com.zoowii.util.ListUtil;
 import com.zoowii.util.StringUtil;
+import org.eclipse.jgit.api.ArchiveCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.archive.TarFormat;
+import org.eclipse.jgit.archive.ZipFormat;
 import org.eclipse.jgit.errors.CorruptObjectException;
 import org.eclipse.jgit.errors.IncorrectObjectTypeException;
 import org.eclipse.jgit.errors.MissingObjectException;
@@ -271,10 +275,33 @@ public class GitService {
      */
     public InputStream archiveGitRepo(Git git, String branchName) throws IOException, GitAPIException {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        git.archive().setOutputStream(byteArrayOutputStream).call();
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
-        byteArrayOutputStream.close();
-        return byteArrayInputStream;
+        Ref branch = getBranch(git, branchName);
+        if (branch == null) {
+            return null;
+        }
+        ArchiveCommand.registerFormat("zip", new ZipFormat());
+        ArchiveCommand cmd = git.archive();
+        try {
+            RevWalk revWalk = new RevWalk(git.getRepository());
+            RevCommit commit = revWalk.parseCommit(branch.getObjectId());
+            RevTree tree = revWalk.parseTree(commit.getTree().getId());
+            revWalk.dispose();
+            cmd.setTree(tree).setFormat("zip").setOutputStream(byteArrayOutputStream).call();
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
+            byteArrayOutputStream.close();
+            return byteArrayInputStream;
+        } finally {
+            ArchiveCommand.unregisterFormat("zip");
+            git.close();
+        }
+    }
+
+    public void removeRepo(String ownerName, String repoName) throws IOException {
+        String repoPath = Settings.getRepoPath(ownerName, repoName);
+        File file = new File(repoPath);
+        if (file.exists() && file.isDirectory()) {
+            file.renameTo(new File(Settings.getTrashPathForRepo(ownerName, repoName)));
+        }
     }
 
 }

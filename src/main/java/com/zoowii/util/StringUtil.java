@@ -47,7 +47,11 @@ public class StringUtil {
         if (salt == null) {
             salt = "";
         }
-        return base64encode(base64encode(password) + salt);
+        if (password == null) {
+            password = "";
+        }
+        // FIXME
+        return base64encode(base64encode(password.trim()) + salt.trim());
     }
 
     public static String rjust(String str, int n, String fillChar) {
@@ -90,6 +94,13 @@ public class StringUtil {
         }
         List<String> resultPathItems = pathItems1.subList(pathItems2.size(), pathItems1.size());
         return join(resultPathItems, "/");
+    }
+
+    public static boolean eq(String o1, String o2) {
+        if (o1 == null) {
+            return o2 == null;
+        }
+        return o1.equals(o2);
     }
 
 }

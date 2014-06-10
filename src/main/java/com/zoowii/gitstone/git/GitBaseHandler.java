@@ -8,6 +8,7 @@ import com.zoowii.gitstone.handlers.BaseHandler;
 import com.zoowii.mvc.handlers.AbstractHandler;
 import com.zoowii.mvc.http.HttpRequest;
 import com.zoowii.mvc.http.HttpResponse;
+import com.zoowii.util.StringUtil;
 import org.apache.commons.codec.binary.Base64;
 
 import java.io.IOException;
@@ -45,8 +46,7 @@ public class GitBaseHandler extends BaseHandler {
     protected static final int ADMIN_TYPE = 4;
     protected static final int ALL_TYPE = 1 | 2;
 
-    protected static boolean checkAuth(HttpRequest request, HttpResponse response, String repoPath, int accessType) throws IOException {
-        // TODO: 如果是public的项目,直接返回true,否则要验证
+    protected static boolean checkBasicAuth(HttpRequest request, HttpResponse response, String repoPath, int accessType) throws IOException {
         String authorization = request.getHeader("Authorization");
         if (authorization == null) {
             return false;
@@ -113,6 +113,18 @@ public class GitBaseHandler extends BaseHandler {
         response.setHeader("Cache-Control", "public, max-age=31536000");
     }
 
+    protected static boolean canWriteRepo(String currentUserName, String repoUserName, String repoName) {
+        return false; // TODO
+    }
+
+    protected static boolean canAdminRepo(String currentUserName, String repoUserName, String repoName) {
+        return false; // TODO
+    }
+
+    protected static boolean isOwnerOfRepo(String currentUserName, String repoUserName, String repoName) {
+        return StringUtil.eq(currentUserName, repoUserName); // TODO: 改成只要是repo的管理员就可以管理,目前是只有拥有者可以管理
+    }
+
     protected static boolean canReadRepo(String currentUserName, String repoUserName, String repoName) {
         try {
             RT.load("gitstone/user_dao");
@@ -122,7 +134,7 @@ public class GitBaseHandler extends BaseHandler {
                 return false;
             }
             Object res = fn.invoke(currentUserName, repoUserName, repoName);
-            return res != null && !(res.equals(false));
+            return res != null && res.equals(true);
         } catch (IOException e) {
             e.printStackTrace();
             return false;

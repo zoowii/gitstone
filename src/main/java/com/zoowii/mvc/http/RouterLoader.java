@@ -23,6 +23,8 @@ public class RouterLoader {
             HttpRouter.setUrlForFn(urlForFn);
         } catch (ClassNotFoundException e) {
             throw new IOException(e);
+        } catch (Exception e) {
+            throw new IOException(e);
         }
     }
 

@@ -1,5 +1,7 @@
 package com.zoowii.mvc.http;
 
+import com.alibaba.fastjson.JSONObject;
+
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -7,6 +9,7 @@ import java.io.PrintWriter;
 
 public class HttpResponse {
     private HttpServletResponse httpServletResponse;
+    private boolean contentTypeSettled = false;
 
     public HttpResponse(HttpServletResponse httpServletResponse) {
         this.httpServletResponse = httpServletResponse;
@@ -27,6 +30,11 @@ public class HttpResponse {
 
     public void setContentType(String contentType) {
         this.getHttpServletResponse().setContentType(contentType);
+        this.contentTypeSettled = true;
+    }
+
+    public boolean isContentTypeSettled() {
+        return contentTypeSettled;
     }
 
     public void sendError(int code, String msg) throws IOException {
@@ -59,6 +67,22 @@ public class HttpResponse {
 
     public void redirect(String url) throws IOException {
         getHttpServletResponse().sendRedirect(url);
+    }
+
+    public void ajaxResponse(boolean success, Object data) throws IOException {
+        this.setContentType("application/json; charset=UTF-8");
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("success", success);
+        jsonObject.put("data", data);
+        this.append(jsonObject.toJSONString());
+    }
+
+    public void ajaxSuccess(Object data) throws IOException {
+        ajaxResponse(true, data);
+    }
+
+    public void ajaxFail(Object data) throws IOException {
+        ajaxResponse(false, data);
     }
 
 }

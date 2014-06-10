@@ -31,7 +31,7 @@
   ([content action method extra-class extra-attrs]
    (html
      [:form (merge {:class  (str/join " " ["form-horizontal" extra-class])
-                    :method method
+                    :method (name method)
                     :action action
                     :role   "form"}
                    extra-attrs)
@@ -43,6 +43,10 @@
   ([content props]
    [:div (into {:class "form-group"} props)
     content]))
+
+(defmacro simple-form-group
+  [& content]
+  `(form-group (html ~@content)))
 
 (defn form-label
   ([content]
@@ -68,11 +72,29 @@
    [:button (into {:class "btn btn-default"} props)
     text]))
 
+(defn default-link
+  ([text]
+   (default-link text "#"))
+  ([text url]
+   (default-link text url {}))
+  ([text url props]
+   [:a (into {:class "btn btn-default"
+              :href  url}
+             props)
+    text]))
+
 (defn success-btn
   ([text]
-   (default-btn text {}))
+   (success-btn text {}))
   ([text props]
    [:button (into {:class "btn btn-success"} props)
+    text]))
+
+(defn danger-btn
+  ([text]
+   (danger-btn text {}))
+  ([text props]
+   [:button (into {:class "btn btn-danger"} props)
     text]))
 
 (defn nav-item

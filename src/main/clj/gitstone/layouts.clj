@@ -2,7 +2,8 @@
   (:import (com.zoowii.mvc.http HttpRouter)
            (java.util ArrayList)
            (org.eclipse.jgit.api Git)
-           (com.zoowii.gitstone.git GitTreeItem))
+           (com.zoowii.gitstone.git GitTreeItem)
+           (clojure.lang IPersistentMap))
   (:require [hiccup.core :refer [html]]
             [hiccup.page :refer [html5 include-js include-css]]
             [hiccup.util :refer [escape-html]]
@@ -46,7 +47,7 @@
          (if cur-user
            (ui/nav-item (web/url-for "profile") (:username cur-user) (= cur-module "profile")))
          (if (and cur-user (= (:role cur-user "admin")))
-           (ui/nav-item "#" "Administration" (= cur-module "admin")))
+           (ui/nav-item (web/url-for "admin-user-list") "Administration" (= cur-module "admin")))
          (if cur-user
            (ui/nav-item (web/url-for "logout") "Sign Out" (= cur-module "sign-out"))
            (ui/nav-item (web/url-for "login_page" (util/jlist*)) "Sign In" (= cur-module "sign-in")))]]]
@@ -101,7 +102,7 @@
               :link    "#"
               :content "Service Hooks"}
              {:active  (= module "danger_zone")
-              :link    "#"
+              :link    (web/url-for "git-settings-danger" username repo-name)
               :content "Danger Zone"}]
             {:class "list-group settings-nav"})]
          [:div {:class "col-md-8"}

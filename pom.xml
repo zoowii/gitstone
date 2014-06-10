@@ -145,6 +145,11 @@
             <version>3.3.2.201404171909-r</version>
         </dependency>
         <dependency>
+            <groupId>com.bacoder.jgit</groupId>
+            <artifactId>org.eclipse.jgit.archive</artifactId>
+            <version>3.1.0-201309071158-r</version>
+        </dependency>
+        <dependency>
             <groupId>hiccup</groupId>
             <artifactId>hiccup</artifactId>
             <version>1.0.5</version>

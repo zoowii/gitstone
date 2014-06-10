@@ -70,10 +70,17 @@
 
 (defn find-user-by-username
   [username]
-  (let [rs (query
-             db-spec
-             ["select * from account where username = ?" username])]
-    (first rs)))
+  (first
+    (query
+      db-spec
+      ["select * from account where username = ?" username])))
+
+(defn find-user-by-email
+  [email]
+  (first
+    (query
+      db-spec
+      ["select * from account where email = ?" email])))
 
 (defn find-repo-by-name-and-user
   "repo名称和用户名称不能包括特殊字符,避免URL有问题"
@@ -95,6 +102,11 @@
   (and name
        (re-matches #"[a-zA-Z_][\d\w_-]{3,}" name)))
 
+(defn check-email-format
+  [email]
+  (and email
+       (re-matches #"[a-zA-Z\d_]+@[a-zA-Z\d_\.]+\.[a-zA-Z][a-zA-Z0-9]*" email)))
+
 (defn check-repo-name
   "repo名称只能包括字母,数字,还有'_', '-'"
   [name]
@@ -113,11 +125,26 @@
           file (File. user-dir)]
       (.mkdirs file))))
 
+(defn update-user!
+  [set-map where-clause]
+  (update! db-spec
+           :account
+           set-map
+           where-clause))
+
+(defn update-user-by-id!
+  [set-map id]
+  (update-user! set-map ["id = ?" id]))
+
 (defn find-repos-of-user
   [user offset limit]
-  (let [rs (query db-spec
-                  ["select * from repository where owner_name = ? limit ? offset ?" (:username user) limit offset])]
-    rs))
+  (query db-spec
+         ["select * from repository where owner_name = ? limit ? offset ?" (:username user) limit offset]))
+
+(defn find-users
+  [offset limit]
+  (query db-spec
+         ["select * from account limit ? offset ?" limit offset]))
 
 (defn create-repo!
   [repo]
@@ -129,28 +156,58 @@
         path (Settings/getRepoPath (:owner_name repo) (:name repo))]
     (.createRepository git-service path)))
 
+(defn update-repo!
+  [set-map where-clause]
+  (update! db-spec
+           :repository
+           set-map
+           where-clause))
+
+(defn update-repo-by-id!
+  [set-map id]
+  (update-repo!
+    set-map
+    ["id = ?" id]))
+
+(defn delete-repo!
+  [where-clause]
+  (delete! db-spec
+           :repository
+           where-clause))
+
+(defn delete-repo-by-id!
+  [id]
+  (delete-repo!
+    ["id = ?" id]))
+
+(defn new-user-info
+  ([username email password]
+   (new-user-info username email password "user"))
+  ([username email password role]
+   (let [salt (StringUtil/randomString 10)
+         password (StringUtil/encryptPassword password salt)]
+     {:id                (uuid)
+      :version           1
+      :created_time      (now-timestamp)
+      :username          username
+      :password          password
+      :email             email
+      :salt              salt
+      :role              (name role)
+      :full_name         username
+      :url               ""
+      :last_updated_time (now-timestamp)
+      :last_login_time   (now-timestamp)
+      :last_active_time  (now-timestamp)
+      :image             ""
+      :is_group_account  false
+      :deleted           false})))
+
 (defn- init-users
   []
   (let [username "root"
         password "root"
-        salt (StringUtil/randomString 10)
-        password (StringUtil/encryptPassword password salt)
-        user {:id                (uuid)
-              :version           1
-              :created_time      (now-timestamp)
-              :username          username
-              :password          password
-              :email             ""
-              :salt              salt
-              :role              "admin"
-              :full_name         username
-              :url               ""
-              :last_updated_time (now-timestamp)
-              :last_login_time   (now-timestamp)
-              :last_active_time  (now-timestamp)
-              :image             ""
-              :is_group_account  false
-              :deleted           false}]
+        user (new-user-info username "" password :admin)]
     (when-not (has-any-users)
       (create-user! user))))
 

@@ -3,7 +3,8 @@
            (com.zoowii.gitstone.git GitHandler GitViewHandler)
            (com.zoowii.gitstone.handlers SiteHandler))
   (:use any-route.core
-        any-route.http))
+        any-route.http)
+  (:require [gitstone.views :as views]))
 
 (defn GET
   [pattern handler route-name]
@@ -44,8 +45,24 @@
 (def git-view-routes [(GET "/branch/:branch" [GitViewHandler "viewPath"] "git_view_branch")
                       (GET "/view/:branch/:*path" [GitViewHandler "viewPath"] "git_view_path")
                       (GET "/settings/options" [GitViewHandler "settingsOptions"] "git-settings-options")
+                      (GET "/settings/danger" [GitViewHandler "settingsDangerZone"] "git-settings-danger")
                       (GET "/archive/:branch" [GitViewHandler "archiveRepo"] "git-archive")
+                      (POST "/settings/options" [GitViewHandler "updateSettingsOptions"] "update-git-settings-options")
+                      (POST "/delete" [GitViewHandler "deleteRepo"] "git-delete")
                       (GET "" [GitViewHandler "index"] "git_view_index")])
+
+(def admin-routes [(GET "/users" views/user-list-page "admin-user-list")
+                   (GET "/new_user" views/new-user-page "admin-new-user-page")
+                   (POST "/new_user" views/admin-new-user "admin-new-user")])
+
+(defn test-page
+  [req res]
+  (.append res
+           "hello from clojure fn"))
+
+(def test-routes [(GET "/fn" test-page "test-fn")
+                  (GET "/str" "hi from clojure str" "test-str")
+                  (GET "/map" {:status 200 :headers {:Content-Type "text/xml; charset=UTF-8"} :body "hi from clojure map"} "test-map")])
 
 ;; 暂时匿名http路由有BUG
 (defroutes routes
@@ -56,7 +73,10 @@
            (ANY "/logout" [SiteHandler "logout"] "logout")
            (GET "/new_repo" [SiteHandler "createRepoPage"] "new-repo-page")
            (GET "/profile" [SiteHandler "profile"] "profile")
+           (POST "/change_password" views/edit-profile "edit-profile")
            (POST "/new_repo" [SiteHandler "createRepo"] "new-repo")
+           (context "/test" test-routes)
+           (context "/admin" admin-routes)
            (context "/git/:user/:repo" git-routes)
            (context "/:user/:repo" git-view-routes)         ;; 因为这个路由的关系,上面路由url中开头的单词都不能作为用户名 TODO
            (ANY "/:*path" [SiteHandler "page404"] "page404"))

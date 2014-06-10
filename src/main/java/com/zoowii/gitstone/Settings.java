@@ -3,6 +3,7 @@ package com.zoowii.gitstone;
 import com.zoowii.util.ResourceUtil;
 
 import java.io.File;
+import java.util.Date;
 import java.util.logging.Logger;
 
 public class Settings {
@@ -35,6 +36,20 @@ public class Settings {
 
     public static String getDbFilePath() {
         return getGitRootPath() + "/gitstone.db";
+    }
+
+    public static String getTrashPath() {
+        String path = ResourceUtil.getPropertyOrEnv("TRASH_HOME", getGitRootPath() + "/_trash");
+        File file = new File(path);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+        return path;
+    }
+
+    public static String getTrashPathForRepo(String ownerName, String repoName) {
+        String dirName = ownerName + "_" + repoName + "_" + new Date().getTime();
+        return getTrashPath() + "/" + dirName;
     }
 
     public static String getDatabaseUrl() {

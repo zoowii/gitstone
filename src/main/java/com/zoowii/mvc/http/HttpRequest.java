@@ -103,6 +103,18 @@ public class HttpRequest {
         }
     }
 
+    public Boolean getBoolPostParam(String name, Boolean defaultValue) {
+        String val = getPostParam(name);
+        if (val == null) {
+            return defaultValue;
+        }
+        try {
+            return Boolean.valueOf(val);
+        } catch (Exception e) {
+            return defaultValue;
+        }
+    }
+
     public String getStringParam(String name, String defaultValue) {
         Object val = getParam(name);
         return val != null ? val.toString() : defaultValue;

@@ -1,6 +1,7 @@
 (ns gitstone.views
   (:import (com.zoowii.mvc.http HttpRequest HttpResponse)
-           (java.util Date))
+           (java.util Date)
+           (com.zoowii.util ClojureUtil))
   (:require [hiccup.core :refer [html]]
             [hiccup.util :refer [escape-html]]
             [gitstone.git :as ggit]
@@ -10,7 +11,8 @@
             [gitstone.db :as db]
             [gitstone.user-dao :as user-dao]
             [gitstone.web :as web]
-            [gitstone.util :refer [uuid now-timestamp format-date]]))
+            [gitstone.util :refer [uuid now-timestamp format-date]]
+            [gitstone.ui :as ui]))
 
 (defn index-page
   [^HttpRequest req ^HttpResponse res]
@@ -167,6 +169,52 @@
         (web/login-as-user req user)
         (web/redirect res (web/url-for "index"))))))
 
+(defn admin-new-user
+  [req res]
+  (let [cur-user (web/current-user req)
+        username (.getPostParam req "username")
+        password (.getPostParam req "password")
+        email (.getPostParam req "email")]
+    (if (nil? cur-user)
+      (web/redirect res (web/url-for "login_page"))
+      (if (or (not (user-dao/check-username-available username))
+              (not (user-dao/check-email-available email))
+              (< (count username) 4)
+              (< (count password) 4))
+        (web/redirect res (web/url-for "admin-new-user-page"))
+        (let [user (db/new-user-info username email password)]
+          (db/create-user! user)
+          (web/redirect res (web/url-for "admin-user-list")))))))
+
+(defn edit-profile
+  [req res]
+  (let [cur-user (web/current-user req)
+        password (.getPostParam req "password")]
+    (if (nil? cur-user)
+      (web/redirect res (web/url-for "login_page"))
+      (let [new-password (user-dao/encrypt-password password (:salt cur-user))]
+        (db/update-user-by-id! {:password new-password}
+                               (:id cur-user))
+        (user-dao/add-user-change-log! cur-user)
+        (web/redirect res (web/url-for "profile"))))))
+
+(defn- edit-profile-panel
+  [cur-user]
+  (html
+    (ui/horizontal-form
+      (html
+        (ui/simple-form-group
+          (ui/form-label "New Password")
+          (ui/form-div
+            (ui/input-field {:required "required"
+                             :type     "password"}
+                            "password")))
+        (ui/simple-form-group
+          (ui/form-whole-div
+            (ui/danger-btn "Change Password"))))
+      (web/url-for "edit-profile")
+      :POST)))
+
 (defn profile
   [^HttpRequest req ^HttpResponse res]
   (let [cur-user (web/current-user req)
@@ -221,4 +269,74 @@
             "..."]
            [:div {:class "tab-pane"
                   :id    "edit-profile"}
-            "..."]]]]))))
+            (edit-profile-panel cur-user)]]]]))))
+
+(defn new-user-page
+  [req res]
+  (web/response
+    res
+    (website-layout
+      (web/current-user req) "new-user-page"
+      (if (not (user-dao/is-admin-user-req req))
+        (web/redirect res (web/url-for "login_page"))
+        (html
+          [:div {:class "row main-content"}
+           [:h4 "New User"]
+           (ui/horizontal-form
+             (html
+               (ui/simple-form-group
+                 (ui/form-label "User Name")
+                 (ui/input-field {:type     "text"
+                                  :required "required"}
+                                 "username"))
+               (ui/simple-form-group
+                 (ui/form-label "Email")
+                 (ui/input-field {:type     "email"
+                                  :required "required"}
+                                 "email"))
+               (ui/simple-form-group
+                 (ui/form-label "Password")
+                 (ui/input-field {:type     "password"
+                                  :required "required"}
+                                 "password"))
+               (ui/form-whole-div
+                 (ui/default-btn "Create User"
+                                 {:type "submit"})))
+             (web/url-for "admin-new-user")
+             :POST)])))))
+
+(defn user-list-page
+  [req res]
+  (web/response
+    res
+    (website-layout
+      (web/current-user req) "user-list"
+      (if (not (user-dao/is-admin-user-req req))
+        (web/redirect res (web/url-for "login_page"))
+        (let [users (db/find-users 0 100)]
+          (html
+            [:div {:class "row main-content"}
+             [:div {:class "panel panel-primary"}
+              [:div {:class "panel-heading"}
+               "Managing Users"]
+              [:div {:class "panel-body"}
+               [:div {:class "btn-group"}
+                (ui/default-link "New User" (web/url-for "admin-new-user-page"))
+                (ui/default-btn "New Group")]]
+              [:table {:class "table table-bordered table-stripped"}
+               [:thead
+                [:th "ID"]
+                [:th "Name"]
+                [:th "Role"]
+                [:th "Join Time"]
+                [:th "Type"]]
+               [:tbody
+                (for [user users]
+                  [:tr
+                   [:td (:id user)]
+                   [:td (:username user)]
+                   [:td (:role user)]
+                   [:td (format-date (Date. (:created_time user)))]
+                   [:td (if (user-dao/is-group-account user)
+                          "Group"
+                          "User")]])]]]]))))))
