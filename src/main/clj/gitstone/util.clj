@@ -1,5 +1,5 @@
 (ns gitstone.util
-  (:import (java.util UUID Date ArrayList)
+  (:import (java.util UUID Date ArrayList TimeZone)
            (com.zoowii.util DateUtil)
            (com.zoowii.mvc.http HttpRequest HttpRouter)))
 
@@ -11,6 +11,8 @@
   []
   (-> (Date.)
       (.getTime)))
+
+(def zh-cn-time-zone (TimeZone/getTimeZone "Asia/Shanghai"))
 
 (defn format-date
   ([date]

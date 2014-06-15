@@ -15,49 +15,117 @@
 
 (logging/info db-spec)
 
-(defn- create-account-table!
-  []
+(defn- try-create-table!
+  [tbl-name & specs]
   (try (execute!
          db-spec
-         [(create-table-ddl
-            :account
-            [:id "varchar(50)"]
-            [:version "integer"]
-            [:created_time "integer"]
-            [:username "varchar(50)"]
-            [:password "varchar(255)"]
-            [:salt "varchar(50)"]
-            [:full_name "varchar(50)"]
-            [:email "varchar(50)"]
-            [:role "varchar(50)"]
-            [:url "varchar(255)"]
-            [:last_updated_time "integer"]
-            [:last_login_time "integer"]
-            [:last_active_time "integer"]
-            [:image "varchar(255)"]
-            [:is_group_account :bool]
-            [:deleted :bool])])
-       (catch Exception e (logging/info e))))
+         [(apply create-table-ddl
+                 (cons tbl-name specs))])
+       (catch Exception e (logging/error e))))
+
+(defn- create-account-table!
+  []
+  (try-create-table!
+    :account
+    [:id "varchar(50)"]
+    [:version "integer"]
+    [:created_time "integer"]
+    [:username "varchar(50)"]
+    [:password "varchar(255)"]
+    [:salt "varchar(50)"]
+    [:full_name "varchar(50)"]
+    [:email "varchar(50)"]
+    [:role "varchar(50)"]
+    [:url "varchar(255)"]
+    [:last_updated_time "integer"]
+    [:last_login_time "integer"]
+    [:last_active_time "integer"]
+    [:image "varchar(255)"]
+    [:is_group_account :bool]
+    [:deleted :bool]))
 
 (defn- create-repository-table!
   []
-  (try (execute!
-         db-spec
-         [(create-table-ddl
-            :repository
-            [:id "varchar(50)"]
-            [:version "integer"]
-            [:created_time "integer"]
-            [:name "varchar(50)"]
-            [:is_private :bool]
-            [:description "text"]
-            [:default_branch "varchar(50)"]
-            [:last_updated_time "integer"]
-            [:owner_name "varchar(50)"]
-            [:last_active_time "integer"]
-            [:parent_user_name "varchar(50)"]
-            [:parent_repository_name "varchar(50)"])])
-       (catch Exception e (logging/info e))))
+  (try-create-table!
+    :repository
+    [:id "varchar(50)"]
+    [:version "integer"]
+    [:created_time "integer"]
+    [:name "varchar(50)"]
+    [:is_private :bool]
+    [:description "text"]
+    [:default_branch "varchar(50)"]
+    [:last_updated_time "integer"]
+    [:owner_name "varchar(50)"]
+    [:last_active_time "integer"]
+    [:parent_user_name "varchar(50)"]
+    [:parent_repository_name "varchar(50)"]))
+
+(defn- create-milestone-table!
+  []
+  (try-create-table!
+    :milestone
+    [:id "varchar(50)"]
+    [:version "integer"]
+    [:created_time "integer"]
+    [:creator_id "varchar(50)"]
+    [:title "varchar(50)"]
+    [:repo_id "varchar(50)"]
+    [:description "text"]
+    [:due_date "integer"]
+    [:status "varchart(50)"]                                ;; open | closed
+    [:closed_time "integer"]
+    [:close_user_id "varchar(50)"]))
+
+(defn- create-issue-table!
+  []
+  (try-create-table!
+    :issue
+    [:id "varchar(50)"]
+    [:version "integer"]
+    [:created_time "integer"]
+    [:creator_id "varchar(50)"]
+    [:title "varchar(50)"]
+    [:content "text"]
+    [:repo_id "varchar(50)"]
+    [:assigned_to_user_id "varchar(50)"]
+    [:milestone_id "varchar(50)"]
+    [:label_id "varchar(50)"]
+    [:status "varchar(50)"]                                 ;; open | closed
+    [:last_updated_time "integer"]
+    [:closed_time "integer"]
+    [:close_user_id "varchar(50)"]))
+
+(defn- create-issue-label-table!
+  []
+  (try-create-table!
+    :issue_label
+    [:id "varchar(50)"]
+    [:version "integer"]
+    [:created_time "integer"]
+    [:name "varchar(50)"]
+    [:color "varchar(50)"]))
+
+(defn get-issue-labels
+  []
+  (query db-spec
+         ["select * from issue_label"]))
+
+(defn- init-issue-labels!
+  []
+  (when (empty? (get-issue-labels))
+    (for [[name color] [["bug" "#fc2929"]
+                        ["duplicate" "#cccccc"]
+                        ["enhancement" "#84b6eb"]
+                        ["invalid" "#e6e6e6"]
+                        ["question" "#cc317c"]
+                        ["wontfix" "#ffffff"]]]
+      (let [label {:id           (uuid)
+                   :version      1
+                   :created_time (now-timestamp)
+                   :name         name
+                   :color        color}]
+        (insert! db-spec :issue_label label)))))
 
 (defn has-any-users
   []
@@ -67,6 +135,27 @@
              :row-fn :count)
         count (first rs)]
     (> count 0)))
+
+(defn find-issues-by-repo
+  [repo]
+  (when repo
+    (query
+      db-spec
+      ["select * from issue where repo_id = ? order by created_time desc" (:id repo)])))
+
+(defn find-user-by-id
+  [id]
+  (when id
+    (-> (query db-spec
+               ["select * from account where id = ?" id])
+        first)))
+
+(defn get-assignee-of-issue
+  "获取Issue被assign给了谁"
+  [issue]
+  (when issue
+    (-> (:assigned_to_user_id issue)
+        find-user-by-id)))
 
 (defn find-user-by-username
   [username]
@@ -203,7 +292,7 @@
       :is_group_account  false
       :deleted           false})))
 
-(defn- init-users
+(defn- init-users!
   []
   (let [username "root"
         password "root"
@@ -215,7 +304,11 @@
   []
   (create-account-table!)
   (create-repository-table!)
-  (init-users))
+  (create-milestone-table!)
+  (create-issue-label-table!)
+  (create-issue-table!)
+  (init-users!)
+  (init-issue-labels!))
 
 (create-db!)
 

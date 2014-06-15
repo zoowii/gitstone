@@ -1,6 +1,6 @@
 (ns gitstone.partials
   (:import (com.zoowii.mvc.http HttpRouter HttpRequest)
-           (java.util ArrayList)
+           (java.util ArrayList Date)
            (com.zoowii.util ClojureUtil StringUtil))
   (:require [hiccup.core :refer [html]]
             [hiccup.page :refer [html5 include-js include-css]]
@@ -55,7 +55,7 @@
        [:li (if (= active-module "issues")
               {:class "active"}
               {})
-        [:a {:href "#"} "Issues"]]
+        (link-to (web/url-for "git-issues" username repo-name) "Issues")]
        [:li (if (= active-module "pull_requests")
               {:class "active"}
               {})
@@ -145,3 +145,44 @@
         [:span (ggit/commit-short-msg last-commit)]
         [:span "Last Commit"]
         [:span (ggit/commit-id last-commit)]))))
+
+(defn issue-list-with-panel
+  "带有管理面板的Issues列表"
+  [req res cur-user repo]
+  (let [issues (db/find-issues-by-repo repo)]
+    (html
+      [:div {:class "row"
+             :style "height: 30px"}]
+      [:div {:class "row"}
+       [:a {:class "btn btn-mn btn-default"
+            :href  (web/url-for "git-create-issue" (:owner_name repo) (:name repo))}
+        "Create Issue"]]
+      [:div {:class "row"}
+       [:span "Filters: "]
+       [:a {:href "#"}
+        [:span {:class "label label-primary"}
+         "Open"]]
+       [:a {:href "#"}
+        [:span {:class "label label-default"}
+         "Closed"]]]
+      [:div {:class "row"}
+       [:table {:class "table table-bordered table-stripped"}
+        [:thead
+         [:th "Title"]
+         [:th "Assigned To"]
+         [:th "Status"]
+         [:th "Created"]
+         [:th "Updated"]]
+        [:tbody
+         (for [issue issues]
+           [:tr
+            [:td (:title issue)]
+            [:td (if-let [assignee (db/get-assignee-of-issue issue)]
+                   (:username assignee))]
+            [:td (:status issue)]
+            [:td (util/format-date (Date. (:created_time issue))
+                                   "yyyy-MM-dd HH:mm:ss"
+                                   util/zh-cn-time-zone)]
+            [:td (util/format-date (Date. (:last_updated_time issue))
+                                   "yyyy-MM-dd HH:mm:ss"
+                                   util/zh-cn-time-zone)]])]]])))

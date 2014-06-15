@@ -33,3 +33,4 @@ Another Github clone implemented by Java and Clojure
 * Pull Requests
 * log activites
 * Wiki
+* 把检查访问权限的部分抽离出来,把hiccup模板部分抽离出来

@@ -4,7 +4,8 @@
            (com.zoowii.gitstone.handlers SiteHandler))
   (:use any-route.core
         any-route.http)
-  (:require [gitstone.views :as views]))
+  (:require [gitstone.views :as views]
+            [gitstone.git-views :as git-views]))
 
 (defn GET
   [pattern handler route-name]
@@ -49,6 +50,8 @@
                       (GET "/archive/:branch" [GitViewHandler "archiveRepo"] "git-archive")
                       (POST "/settings/options" [GitViewHandler "updateSettingsOptions"] "update-git-settings-options")
                       (POST "/delete" [GitViewHandler "deleteRepo"] "git-delete")
+                      (GET "/issues" git-views/view-repo-issues-page "git-issues")
+                      (GET "/issues/create" git-views/create-issue-page "git-create-issue")
                       (GET "" [GitViewHandler "index"] "git_view_index")])
 
 (def admin-routes [(GET "/users" views/user-list-page "admin-user-list")

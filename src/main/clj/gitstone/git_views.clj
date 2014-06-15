@@ -91,6 +91,78 @@
       (view-path-content req res username repo-name path git cur-branch-name branch-names last-commit tree)
       (display-empty-repo req res username repo-name))))
 
+(defn create-issue-page
+  [req res]
+  (let [cur-user (web/current-user req)
+        cur-username (if cur-user (:username cur-user))
+        repo-name (.getParam req "repo")
+        repo (db/find-repo-by-name-and-user repo-name cur-user)
+        labels (db/get-issue-labels)]
+    (if (not repo)
+      (web/redirect res (web/url-for "index"))
+      (if (not (repo-dao/can-access-repo repo cur-user))
+        (web/redirect res (web/url-for "index"))
+        (web/response
+          res
+          (view-repo-layout
+            req res cur-username repo-name (str "Create Issue - " repo-name) "issues"
+            (html
+              (ui/horizontal-form
+                (html
+                  (ui/simple-form-group
+                    (ui/form-label "Title")
+                    (ui/input-field {:type "text"} "title"))
+                  (ui/simple-form-group
+                    (ui/form-label "Content")
+                    (ui/input-field {:type "text"} "content"))
+                  (ui/simple-form-group
+                    (ui/form-label "Assigned To")
+                    (ui/input-field {:type "text"} "assignee"))
+                  (ui/simple-form-group
+                    (ui/form-label "Label")
+                    (ui/select-control
+                      (for [label labels]
+                        {:content (:name label)
+                         :value   (:id label)
+                         :props   {:style (str "color: " (:color label) ";")}})
+                      {:value (when (seq labels)
+                                (:id (first labels)))}))
+                  (ui/form-whole-div
+                    (ui/default-btn "Submit"
+                                    {:type "button"})))))))))))
+
+(defn view-repo-issues-page
+  [req res]
+  (let [cur-user (web/current-user req)
+        cur-username (if cur-user (:username cur-user))
+        repo-name (.getParam req "repo")
+        repo (db/find-repo-by-name-and-user repo-name cur-user)]
+    (if (not repo)
+      (web/redirect res (web/url-for "index"))
+      (if (not (repo-dao/can-access-repo repo cur-user))
+        (web/redirect res (web/url-for "index"))
+        (web/response
+          res
+          (view-repo-layout
+            req res cur-username repo-name (str "Issues - " repo-name) "issues"
+            (html
+              [:ul {:class "nav nav-tabs"}
+               [:li {:class "active"}
+                [:a {:href        "#issues-tab"
+                     :data-toggle "tab"}
+                 "Browse Issues"]]
+               [:li
+                [:a {:href        "#milestones-tab"
+                     :data-toggle "tab"}
+                 "Milestones"]]]
+              [:div {:class "tab-content"}
+               [:div {:class "tab-pane active"
+                      :id    "issues-tab"}
+                (partials/issue-list-with-panel req res cur-user repo)]
+               [:div {:class "tab-pane"
+                      :id    "milestones-tab"}
+                "Milestones"]])))))))
+
 (defn view-repo-settings-danger-zone
   [req res username repo-name]
   (let [cur-user (web/current-user req)
