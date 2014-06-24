@@ -1,6 +1,6 @@
 (ns gitstone.util
   (:import (java.util UUID Date ArrayList TimeZone)
-           (com.zoowii.util DateUtil)
+           (com.zoowii.util DateUtil ClojureUtil)
            (com.zoowii.mvc.http HttpRequest HttpRouter)))
 
 (defn uuid
@@ -30,3 +30,7 @@
 (defn jlist*
   [& col]
   (jlist col))
+
+(defmacro clj-debug
+  [& xs]
+  `(ClojureUtil/debug [~@xs]))

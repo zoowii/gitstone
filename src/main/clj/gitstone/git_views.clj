@@ -3,7 +3,7 @@
            (com.zoowii.mvc.http HttpRequest HttpResponse HttpRouter)
            (org.eclipse.jgit.api Git)
            (java.util ArrayList)
-           (com.zoowii.util FileUtil StringUtil ClojureUtil)
+           (com.zoowii.util FileUtil StringUtil)
            (org.apache.commons.lang StringUtils))
   (:require [hiccup.core :refer [html]]
             [hiccup.util :refer [escape-html]]
@@ -17,7 +17,10 @@
             [gitstone.util :as util]
             [gitstone.db :as db]
             [gitstone.partials :as partials]
-            [gitstone.repo-dao :as repo-dao]))
+            [gitstone.repo-dao :as repo-dao]
+            [gitstone.view-util :as view-util]
+            [gitstone.templates.issues :as issues-tmpl]
+            [gitstone.templates.settings :as settings-tmpl]))
 
 (defn- no-access-to-view-repo
   [req res username repo-name]
@@ -91,175 +94,56 @@
       (view-path-content req res username repo-name path git cur-branch-name branch-names last-commit tree)
       (display-empty-repo req res username repo-name))))
 
-(defn create-issue-page
+(defn create-issue-page-handler
   [req res]
   (let [cur-user (web/current-user req)
-        cur-username (if cur-user (:username cur-user))
+        cur-username (db/username-of-user cur-user)
         repo-name (.getParam req "repo")
         repo (db/find-repo-by-name-and-user repo-name cur-user)
+        collaborators (db/find-repo-collaborators-with-owner repo)
         labels (db/get-issue-labels)]
-    (if (not repo)
-      (web/redirect res (web/url-for "index"))
-      (if (not (repo-dao/can-access-repo repo cur-user))
-        (web/redirect res (web/url-for "index"))
-        (web/response
-          res
-          (view-repo-layout
-            req res cur-username repo-name (str "Create Issue - " repo-name) "issues"
-            (html
-              (ui/horizontal-form
-                (html
-                  (ui/simple-form-group
-                    (ui/form-label "Title")
-                    (ui/input-field {:type "text"} "title"))
-                  (ui/simple-form-group
-                    (ui/form-label "Content")
-                    (ui/input-field {:type "text"} "content"))
-                  (ui/simple-form-group
-                    (ui/form-label "Assigned To")
-                    (ui/input-field {:type "text"} "assignee"))
-                  (ui/simple-form-group
-                    (ui/form-label "Label")
-                    (ui/select-control
-                      (for [label labels]
-                        {:content (:name label)
-                         :value   (:id label)
-                         :props   {:style (str "color: " (:color label) ";")}})
-                      {:value (when (seq labels)
-                                (:id (first labels)))}))
-                  (ui/form-whole-div
-                    (ui/default-btn "Submit"
-                                    {:type "button"})))))))))))
+    (issues-tmpl/create-issue-tmpl req res cur-username repo labels collaborators)))
 
-(defn view-repo-issues-page
+(def create-issue-page
+  (-> create-issue-page-handler
+      view-util/response-wrapper
+      view-util/asset-can-access-repo-wrapper))
+
+(defn create-issue-handler
+  "响应创建issue的请求"
   [req res]
   (let [cur-user (web/current-user req)
-        cur-username (if cur-user (:username cur-user))
+        cur-username (db/username-of-user cur-user)
+        repo-name (.getParam req "repo")
+        repo (db/find-repo-by-name-and-user repo-name cur-user)
+        title (.getPostParam req "title")
+        content (.getPostParam req "content")
+        assignee-id (.getPostParam req "assignee_id")
+        label-id (.getPostParam req "label_id")
+        _ (util/clj-debug cur-user repo-name repo title content assignee-id label-id)
+        issue (db/new-issue-info (:id cur-user) (:id repo) title content assignee-id label-id)
+        _ (db/insert-issue! issue)]
+    (web/redirect res (web/url-for "git-issues" (:owner_name repo) (:name repo)))))
+
+(defn view-repo-issues-handler
+  [req res]
+  (let [cur-user (web/current-user req)
         repo-name (.getParam req "repo")
         repo (db/find-repo-by-name-and-user repo-name cur-user)]
-    (if (not repo)
-      (web/redirect res (web/url-for "index"))
-      (if (not (repo-dao/can-access-repo repo cur-user))
-        (web/redirect res (web/url-for "index"))
-        (web/response
-          res
-          (view-repo-layout
-            req res cur-username repo-name (str "Issues - " repo-name) "issues"
-            (html
-              [:ul {:class "nav nav-tabs"}
-               [:li {:class "active"}
-                [:a {:href        "#issues-tab"
-                     :data-toggle "tab"}
-                 "Browse Issues"]]
-               [:li
-                [:a {:href        "#milestones-tab"
-                     :data-toggle "tab"}
-                 "Milestones"]]]
-              [:div {:class "tab-content"}
-               [:div {:class "tab-pane active"
-                      :id    "issues-tab"}
-                (partials/issue-list-with-panel req res cur-user repo)]
-               [:div {:class "tab-pane"
-                      :id    "milestones-tab"}
-                "Milestones"]])))))))
+    (issues-tmpl/view-repo-issues-tmpl req res cur-user repo)))
+
+(def view-repo-issues-page
+  (-> view-repo-issues-handler
+      view-util/response-wrapper
+      view-util/asset-can-access-repo-wrapper))
 
 (defn view-repo-settings-danger-zone
   [req res username repo-name]
-  (let [cur-user (web/current-user req)
-        repo (db/find-repo-by-name-and-user repo-name username)]
-    (view-repo-settings-layout
-      req res username repo-name "danger_zone"
-      (html
-        [:script
-         (str "var delRepoUrl = '"
-              (web/url-for "git-delete" username repo-name)
-              "';
-              var indexUrl = '"
-              (web/url-for "index")
-              "';")]
-        (include-js (web/js-url "settings_danger.js"))
-        [:div {:class "panel panel-primary"}
-         [:div {:class "panel-heading"}
-          [:h3 {:class "panel-title"}
-           "Danger Zone"]]
-         [:div {:class "panel-body"}
-          [:div {:class "row"}
-           [:div {:class "col-md-4"}
-            [:h4 "Transfer Ownership"]
-            [:p
-             "Transfer this repo to another user or to group."]]
-           [:div {:class "col-md-4"}
-            (ui/input-field {:type  "text"
-                             :class "transfer-to-field"})
-            (ui/danger-btn
-              "Transfer"
-              {:class "transfer-ownership-btn btn btn-danger"})]]
-          [:div {:class "row"}
-           [:div {:class "col-md-4"}
-            [:h4 "Delete repository"]
-            [:p
-             "Once you delete a repository, there is no going back."]]
-           [:div {:class "col-md-4"}
-            (ui/danger-btn
-              "Delete this repository"
-              {:class "delete-repo-btn btn btn-danger"})]]]]))))
+  (let [repo (db/find-repo-by-name-and-user repo-name username)]
+    (settings-tmpl/view-repo-settings-danger-zone-tmpl req res repo)))
 
 (defn view-repo-settings-options
   [req res username repo-name branch-names]
-  (let [cur-user (web/current-user req)
-        repo (db/find-repo-by-name-and-user repo-name username)
+  (let [repo (db/find-repo-by-name-and-user repo-name username)
         branch-names (vec branch-names)]
-    (view-repo-settings-layout
-      req res username repo-name "options"
-      (html
-        (include-js (web/js-url "settings_options.js"))
-        [:script
-         (str "var updateSettingsOptionsUrl = '"
-              (web/url-for "update-git-settings-options" username repo-name)
-              "';")]
-        [:div {:class "panel panel-primary"}
-         [:div {:class "panel-heading"}
-          [:h3 {:class "panel-title"}
-           "Settings"]]
-         [:div {:class "panel-body"}
-          [:form {:role   "form"
-                  :method "POST"
-                  :name   "settings_options_form"
-                  :action ""}
-           (ui/form-group
-             (html
-               [:label "Repository Name:"]
-               (ui/input-field {:type     "text"
-                                :name     "repo_name"
-                                :value    repo-name
-                                :disabled "disabled"})))
-           (ui/form-group
-             (html
-               [:label "Description:"]
-               (ui/input-field {:type  "text"
-                                :name  "description"
-                                :value (:description repo)})))
-           (ui/form-group
-             (html
-               [:label "Default Branch:"]
-               (ui/select-control
-                 (for [b branch-names]
-                   {:content b
-                    :value   b})
-                 (:default_branch repo)
-                 {:name "default_branch"})))
-           (ui/form-group
-             (html
-               (ui/radio-group
-                 "select_for_access"
-                 [{:value   "public"
-                   :content "Public"}
-                  {:value   "private"
-                   :content "Private"}]
-                 (if (repo-dao/is-repo-private repo)
-                   "private"
-                   "public")
-                 {:name "is_private"})))
-           [:button {:class "btn btn-default save-btn"
-                     :type  "button"}
-            "Apply Changes"]]]]))))
+    (settings-tmpl/view-repo-settings-options-tmpl req res repo branch-names)))

@@ -52,6 +52,7 @@
                       (POST "/delete" [GitViewHandler "deleteRepo"] "git-delete")
                       (GET "/issues" git-views/view-repo-issues-page "git-issues")
                       (GET "/issues/create" git-views/create-issue-page "git-create-issue")
+                      (POST "/issues/create" git-views/create-issue-handler "git-create-issues-handler")
                       (GET "" [GitViewHandler "index"] "git_view_index")])
 
 (def admin-routes [(GET "/users" views/user-list-page "admin-user-list")

@@ -66,20 +66,18 @@
    (view-repo-layout req res username repo-name title module content nil nil))
   ([req res username repo-name title
     module content header footer]
-   (let [cur-user (web/current-user req)
-         repo (db/find-repo-by-name-and-user repo-name username)]
-     (website-layout
-       (web/current-user req) title
-       (html
-         (when header
-           header)
-         [:div {:class "row main-content"}
-          (partials/view-git-head-patial req username repo-name)
-          [:div {:class "row main-content"}
-           (partials/view-git-nav-partial req username repo-name module)
-           content]]
-         (when footer
-           footer))))))
+   (website-layout
+     (web/current-user req) title
+     (html
+       (when header
+         header)
+       [:div {:class "row main-content"}
+        (partials/view-git-head-patial req username repo-name)
+        [:div {:class "row main-content"}
+         (partials/view-git-nav-partial req username repo-name module)
+         content]]
+       (when footer
+         footer)))))
 
 (defn view-repo-settings-layout
   [req res username repo-name module content]

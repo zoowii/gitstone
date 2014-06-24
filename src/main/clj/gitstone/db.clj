@@ -24,6 +24,7 @@
        (catch Exception e (logging/error e))))
 
 (defn- create-account-table!
+  "创建账户表,账户包括用户和用户组,不过目前先只支持用户,不提供用户组的功能"
   []
   (try-create-table!
     :account
@@ -45,6 +46,7 @@
     [:deleted :bool]))
 
 (defn- create-repository-table!
+  "创建git repo表"
   []
   (try-create-table!
     :repository
@@ -60,6 +62,20 @@
     [:last_active_time "integer"]
     [:parent_user_name "varchar(50)"]
     [:parent_repository_name "varchar(50)"]))
+
+(def repository-collaborator-table-name :repository_collaborator)
+(defn- create-repository-collaborator-table!
+  "创建git repo协作者表"
+  []
+  (try-create-table!
+    repository-collaborator-table-name
+    [:id "varchar(50)"]
+    [:version "integer"]
+    [:created_time "integer"]
+    [:repo_id "varchar(50)"]
+    [:user_id "varchar(50)"]
+    [:role "varchar(50)"]                                   ;; role表示协作者身份, 包括admin/developer/viewer,目前所有协作者都当做admin role
+    ))
 
 (defn- create-milestone-table!
   []
@@ -89,12 +105,12 @@
     [:content "text"]
     [:repo_id "varchar(50)"]
     [:assigned_to_user_id "varchar(50)"]
-    [:milestone_id "varchar(50)"]
+    [:milestone_id "varchar(50) null"]
     [:label_id "varchar(50)"]
     [:status "varchar(50)"]                                 ;; open | closed
     [:last_updated_time "integer"]
     [:closed_time "integer"]
-    [:close_user_id "varchar(50)"]))
+    [:close_user_id "varchar(50) null"]))
 
 (defn- create-issue-label-table!
   []
@@ -225,6 +241,13 @@
   [set-map id]
   (update-user! set-map ["id = ?" id]))
 
+(defn username-of-user
+  [user]
+  (when user
+    (if (or (string? user) (nil? user))
+      user
+      (:username user))))
+
 (defn find-repos-of-user
   [user offset limit]
   (query db-spec
@@ -234,6 +257,41 @@
   [offset limit]
   (query db-spec
          ["select * from account limit ? offset ?" limit offset]))
+
+(defn find-repo-collaborator-ids
+  "获取repo的协作者的ID列表"
+  [repo]
+  (let [repo-id (if (map? repo) (:id repo) repo)]
+    (->> (query db-spec
+                [(str "select user_id from "
+                      (name repository-collaborator-table-name)
+                      " where repo_id = ?") repo-id])
+         (map :user_id))))
+
+(defn find-repo-collaborators
+  "获取repo的协作者列表"
+  [repo]
+  (->> (find-repo-collaborator-ids repo)
+       (map #(find-user-by-id (:user_id %)))))
+
+(defn find-owner-of-repo
+  [repo]
+  (when repo
+    (find-user-by-username (:owner_name repo))))
+
+(defn find-repo-collaborators-with-owner
+  [repo]
+  (let [owner (find-owner-of-repo repo)]
+    (conj (find-repo-collaborators repo) owner)))
+
+(defn is-collaborator-of-repo?
+  [repo user]
+  (when (and repo user)
+    (first (query
+             db-spec
+             [(str "select * from "
+                   (name repository-collaborator-table-name)
+                   " where repo_id = ? and user_id = ?") (:id repo) (:id user)]))))
 
 (defn create-repo!
   [repo]
@@ -292,6 +350,34 @@
       :is_group_account  false
       :deleted           false})))
 
+
+(defn new-issue-info
+  ([creator-id repo-id title content assignee-id label-id]
+   (new-issue-info creator-id repo-id title content assignee-id label-id nil))
+  ([creator-id repo-id title content assignee-id label-id milestone-id]
+   (new-issue-info creator-id repo-id title content assignee-id label-id milestone-id "open"))
+  ([creator-id repo-id title content assignee-id label-id milestone-id status]
+   {:id                  (uuid)
+    :version             1
+    :created_time        (now-timestamp)
+    :creator_id          creator-id
+    :title               title
+    :content             content
+    :repo_id             repo-id
+    :assigned_to_user_id assignee-id
+    :milestone_id        milestone-id
+    :label_id            label-id
+    :status              status
+    :last_updated_time   (now-timestamp)
+    :closed_time         0
+    :close_user_id       nil}))
+
+(defn insert-issue!
+  [issue]
+  (insert! db-spec
+           :issue
+           issue))
+
 (defn- init-users!
   []
   (let [username "root"
@@ -304,6 +390,7 @@
   []
   (create-account-table!)
   (create-repository-table!)
+  (create-repository-collaborator-table!)
   (create-milestone-table!)
   (create-issue-label-table!)
   (create-issue-table!)
