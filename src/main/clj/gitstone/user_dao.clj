@@ -54,16 +54,14 @@
   (when-let [repo (get-repo-from-path repo-path)]
     (let [user (find-user-by-username-and-password username password)]
       (and user
-           (= (:owner_name repo)
-              (:username user))))))
+           (repo-dao/can-admin-repo repo user)))))
 
 (defn auth-access-admin-repo
   [username password repo-path]
   (when-let [repo (get-repo-from-path repo-path)]
     (let [user (find-user-by-username-and-password username password)]
       (and user
-           (= (:owner_name repo)
-              (:username user))))))
+           (repo-dao/can-admin-repo repo user)))))
 
 (defn is-admin-user
   [user]

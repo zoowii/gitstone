@@ -20,7 +20,8 @@
             [gitstone.repo-dao :as repo-dao]
             [gitstone.view-util :as view-util]
             [gitstone.templates.issues :as issues-tmpl]
-            [gitstone.templates.settings :as settings-tmpl]))
+            [gitstone.templates.settings :as settings-tmpl]
+            [gitstone.templates.view-repo :as view-repo-tmpl]))
 
 (defn- no-access-to-view-repo
   [req res username repo-name]
@@ -32,41 +33,7 @@
   [req res username repo-name path
    ^Git git cur-branch-name branch-names
    last-commit tree]
-  (view-repo-layout
-    req res username repo-name (str repo-name " " path)
-    "code"
-    (html
-      [:div
-       (partials/view-git-nav2-partial req username repo-name cur-branch-name branch-names path)
-       [:div
-        (partials/view-git-breadcrumb-partial req username repo-name cur-branch-name path)
-        [:div
-         [:div {:class "panel panel-default"}
-          [:div {:class "panel-heading"}
-           (partials/view-git-last-commit-partial req username repo-name last-commit)]
-          [:div {:class "panel-body"}
-           (when-not (.isTree tree)
-             (let [stream (.getBlob (GitService/getInstance) git (.getObjectId tree))
-                   preview-text (FileUtil/tryParseStreamToString stream)]
-               [:div (if preview-text
-                       {:id "code-preview-area" :style (str "width: 100%; min-height: " (int (* 1.5 (StringUtils/countMatches preview-text "\n"))) "em")}
-                       {:id "code-preview-area"})
-                (if preview-text
-                  (escape-html preview-text)
-                  "Can't preview this file yet")]))]
-          (if (.isTree tree)
-            [:ul {:class "list-group"}
-             (for [item (.getItems tree)]
-               [:li {:class "list-group-item"}
-                [:span {:class (if (.isTree item)
-                                 "glyphicon glyphicon-book"
-                                 "glyphicon glyphicon-list-alt")}]
-                [:a {:href (web/url-for "git_view_path" username repo-name cur-branch-name (.getPath item))}
-                 (.getName item)]])])]]]])
-    (when-not (.isTree tree)
-      (include-js (web/js-url "src-min/ace.js")))
-    (when-not (.isTree tree)
-      (include-js (web/js-url "preview_git_file.js")))))
+  (view-repo-tmpl/view-file-tmpl req res username repo-name path git cur-branch-name branch-names last-commit tree))
 
 (defn- display-empty-repo
   "显示空git repo"
@@ -94,28 +61,21 @@
       (view-path-content req res username repo-name path git cur-branch-name branch-names last-commit tree)
       (display-empty-repo req res username repo-name))))
 
-(defn create-issue-page-handler
+(defn create-issue-page
   [req res]
   (let [cur-user (web/current-user req)
         cur-username (db/username-of-user cur-user)
-        repo-name (.getParam req "repo")
-        repo (db/find-repo-by-name-and-user repo-name cur-user)
+        repo (repo-dao/get-repo-from-req req)
         collaborators (db/find-repo-collaborators-with-owner repo)
         labels (db/get-issue-labels)]
     (issues-tmpl/create-issue-tmpl req res cur-username repo labels collaborators)))
-
-(def create-issue-page
-  (-> create-issue-page-handler
-      view-util/response-wrapper
-      view-util/asset-can-access-repo-wrapper))
 
 (defn create-issue-handler
   "响应创建issue的请求"
   [req res]
   (let [cur-user (web/current-user req)
-        cur-username (db/username-of-user cur-user)
         repo-name (.getParam req "repo")
-        repo (db/find-repo-by-name-and-user repo-name cur-user)
+        repo (repo-dao/get-repo-from-req req)
         title (.getPostParam req "title")
         content (.getPostParam req "content")
         assignee-id (.getPostParam req "assignee_id")
@@ -125,17 +85,11 @@
         _ (db/insert-issue! issue)]
     (web/redirect res (web/url-for "git-issues" (:owner_name repo) (:name repo)))))
 
-(defn view-repo-issues-handler
+(defn view-repo-issues-page
   [req res]
   (let [cur-user (web/current-user req)
-        repo-name (.getParam req "repo")
-        repo (db/find-repo-by-name-and-user repo-name cur-user)]
+        repo (repo-dao/get-repo-from-req req)]
     (issues-tmpl/view-repo-issues-tmpl req res cur-user repo)))
-
-(def view-repo-issues-page
-  (-> view-repo-issues-handler
-      view-util/response-wrapper
-      view-util/asset-can-access-repo-wrapper))
 
 (defn view-repo-settings-danger-zone
   [req res username repo-name]
@@ -147,3 +101,28 @@
   (let [repo (db/find-repo-by-name-and-user repo-name username)
         branch-names (vec branch-names)]
     (settings-tmpl/view-repo-settings-options-tmpl req res repo branch-names)))
+
+(defn view-repo-collaborators-page
+  [req res]
+  (let [repo (repo-dao/get-repo-from-req req)
+        collaborator-mappings (db/find-repo-collaborators-mapping repo)]
+    (settings-tmpl/view-repo-settings-collaborators-tmpl req res repo collaborator-mappings)))
+
+(defn add-repo-collaborator-page
+  [req res]
+  (let [repo (repo-dao/get-repo-from-req req)]
+    (settings-tmpl/add-repo-collaborator-tmpl req res repo)))
+
+(defn add-repo-collaborator-handler
+  [req res]
+  (let [repo (repo-dao/get-repo-from-req req)
+        username (.getPostParam req "username")
+        user (db/find-user-by-username username)
+        role (.getPostParam req "role")]
+    (if (nil? user)
+      (web/redirect res (web/url-for "index"))
+      (if (db/is-collaborator-of-repo? repo user)
+        (web/redirect res (web/url-for "git-add-collaborator" (:owner_name repo) (:name repo)))
+        (let [collaborator-mapping (db/new-repo-collaborator-info (:id user) (:id repo) role)
+              _ (db/insert-repo-collaborator! collaborator-mapping)]
+          (web/redirect res (web/url-for "git-collaborators" (:owner_name repo) (:name repo))))))))

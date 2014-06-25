@@ -109,3 +109,62 @@
             (ui/danger-btn
               "Delete this repository"
               {:class "delete-repo-btn btn btn-danger"})]]]]))))
+
+(defn view-repo-settings-collaborators-tmpl
+  [req res repo collaborator-mappings]
+  (view-repo-settings-layout
+    req res (:owner_name repo) (:name repo) "Collaborators"
+    (html
+      [:div {:class "panel panel-primary"}
+       [:div {:class "panel-heading"}
+        [:h3 {:class "panel-title"}
+         "Collaborators"]]
+       [:div {:class "panel-body"}
+        [:div {:class "row"}
+         (ui/default-link "Add Collaborator" (web/url-for "git-add-collaborator" (:owner_name repo) (:name repo)))]
+        [:div
+         [:table {:class "table table-bordered table-striped"}
+          [:thead
+           [:th "Username"]
+           [:th "Role"]
+           [:th "Actions"]]
+          [:tbody
+           (for [collaborator-mapping collaborator-mappings]
+             (let [user (db/find-user-by-id (:user_id collaborator-mapping))]
+               [:tr
+                [:td (:username user)]
+                [:td (:role collaborator-mapping)]
+                [:td
+                 (ui/default-btn "Remove")]]))]]]]])))
+
+(defn add-repo-collaborator-tmpl
+  [req res repo]
+  (view-repo-settings-layout
+    req res (:owner_name repo) (:name repo) "Add Collaborator"
+    (html
+      [:div {:class "panel panel-primary"}
+       [:div {:class "panel-heading"}
+        [:h3 {:class "panel-title"}
+         "Add Collaborator"]]
+       [:div {:class "panel-body"}
+        [:form {:role   "form"
+                :method "POST"
+                :name   "add-collaborator-form"
+                :action (web/url-for "git-add-collaborator-handler" (:owner_name repo) (:name repo))}
+         (ui/form-group
+           (html
+             [:label "Collaborator Username:"]
+             (ui/input-field {:type "text"
+                              :name "username"})))
+         (ui/form-group
+           (html
+             [:label "Role:"]
+             (ui/select-control
+               (for [r ["admin" "developer" "viewer"]]
+                 {:content r
+                  :value   r})
+               nil
+               {:name "role"})))
+         [:button {:class "btn btn-default save-btn"
+                   :type  "submit"}
+          "Submit"]]]])))

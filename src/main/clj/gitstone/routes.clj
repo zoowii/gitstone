@@ -5,7 +5,8 @@
   (:use any-route.core
         any-route.http)
   (:require [gitstone.views :as views]
-            [gitstone.git-views :as git-views]))
+            [gitstone.git-views :as git-views]
+            [gitstone.view-util :as view-util]))
 
 (defn GET
   [pattern handler route-name]
@@ -49,9 +50,12 @@
                       (GET "/settings/danger" [GitViewHandler "settingsDangerZone"] "git-settings-danger")
                       (GET "/archive/:branch" [GitViewHandler "archiveRepo"] "git-archive")
                       (POST "/settings/options" [GitViewHandler "updateSettingsOptions"] "update-git-settings-options")
+                      (GET "/settings/collaborators" (view-util/repo-admin-wrapper git-views/view-repo-collaborators-page) "git-collaborators")
+                      (GET "/settings/collaborators/add" (view-util/repo-admin-wrapper git-views/add-repo-collaborator-page) "git-add-collaborator")
+                      (POST "/settings/collaborators/add" git-views/add-repo-collaborator-handler "git-add-collaborator-handler")
                       (POST "/delete" [GitViewHandler "deleteRepo"] "git-delete")
-                      (GET "/issues" git-views/view-repo-issues-page "git-issues")
-                      (GET "/issues/create" git-views/create-issue-page "git-create-issue")
+                      (GET "/issues" (view-util/repo-access-wrapper git-views/view-repo-issues-page) "git-issues")
+                      (GET "/issues/create" (view-util/repo-access-wrapper git-views/create-issue-page) "git-create-issue")
                       (POST "/issues/create" git-views/create-issue-handler "git-create-issues-handler")
                       (GET "" [GitViewHandler "index"] "git_view_index")])
 

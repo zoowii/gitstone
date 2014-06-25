@@ -94,7 +94,7 @@
               :link    (web/url-for "git-settings-options" username repo-name)
               :content "Options"}
              {:active  (= module "collaborators")
-              :link    "#"
+              :link    (web/url-for "git-collaborators" username repo-name)
               :content "Collaborators"}
              {:active  (= module "service_hooks")
               :link    "#"

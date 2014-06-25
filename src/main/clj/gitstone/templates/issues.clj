@@ -9,7 +9,8 @@
             [gitstone.layouts :refer :all]
             [gitstone.partials :as partials]
             [gitstone.db :as db]
-            [gitstone.web :as web]))
+            [gitstone.web :as web]
+            [gitstone.util :as util]))
 
 (defn create-issue-tmpl
   [req res cur-username repo labels collaborators]
@@ -51,7 +52,7 @@
 (defn view-repo-issues-tmpl
   [req res cur-user repo]
   (view-repo-layout
-    req res (db/username-of-user cur-user) (:name repo) (str "Issues - " (:name repo)) "issues"
+    req res (:owner_name repo) (:name repo) (str "Issues - " (:name repo)) "issues"
     (html
       [:ul {:class "nav nav-tabs"}
        [:li {:class "active"}

@@ -1,8 +1,10 @@
 (ns gitstone.repo-dao
   (:import (com.zoowii.gitstone.git GitService)
-           (com.zoowii.util ClojureUtil))
+           (com.zoowii.util ClojureUtil)
+           (com.zoowii.mvc.http HttpRequest))
   (:require [gitstone.db :as db]
-            [clojure.tools.logging :as logging]))
+            [clojure.tools.logging :as logging]
+            [gitstone.util :as util]))
 
 (defn update-repo-settings!
   "修改repo的设置(描述,默认分支,public/private)"
@@ -25,6 +27,7 @@
   [repo user]
   (let [username (db/username-of-user user)]
     (when repo
+      (util/clj-debug user repo)
       (or (= username (:owner_name repo))
           (db/is-collaborator-of-repo? repo (db/find-user-by-username username))))))
 
@@ -49,3 +52,7 @@
       (try
         (.removeRepo (GitService/getInstance) owner-name repo-name)
         (catch Exception e (logging/error e))))))
+
+(defn get-repo-from-req
+  [^HttpRequest req]
+  (db/find-repo-by-name-and-user (.getParam req "repo") (.getParam req "user")))

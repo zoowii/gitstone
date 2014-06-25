@@ -248,10 +248,33 @@
       user
       (:username user))))
 
+(defn find-repo-by-id
+  [id]
+  (first
+    (query db-spec
+           ["select * from repository where id = ?" id])))
+
 (defn find-repos-of-user
   [user offset limit]
   (query db-spec
          ["select * from repository where owner_name = ? limit ? offset ?" (:username user) limit offset]))
+
+(defn find-repos-of-user-as-collaborator
+  "获取用户作为协作者可以访问的repos"
+  [user offset limit]
+  (let [repo-ids (->> (query db-spec
+                             [(str "select repo_id from "
+                                   (name repository-collaborator-table-name)
+                                   " where user_id = ? limit ? offset ?")
+                              (:id user) limit offset])
+                      (map :repo_id))]
+    (map find-repo-by-id repo-ids)))
+
+(defn find-repos-user-can-access
+  "获取用户直接拥有或者是协作者或者是同一组(TODO)的git repos"
+  [user offset limit]
+  (concat (find-repos-of-user user offset limit)
+          (find-repos-of-user-as-collaborator user offset limit)))
 
 (defn find-users
   [offset limit]
@@ -274,6 +297,14 @@
   (->> (find-repo-collaborator-ids repo)
        (map #(find-user-by-id (:user_id %)))))
 
+(defn find-repo-collaborators-mapping
+  "获取repo的协作者的映射关系列表,也就是repo-collaborator表的记录"
+  [repo]
+  (query db-spec
+         [(str "select * from "
+               (name repository-collaborator-table-name)
+               " where repo_id = ?") (if (map? repo) (:id repo) repo)]))
+
 (defn find-owner-of-repo
   [repo]
   (when repo
@@ -292,6 +323,21 @@
              [(str "select * from "
                    (name repository-collaborator-table-name)
                    " where repo_id = ? and user_id = ?") (:id repo) (:id user)]))))
+
+(defn new-repo-collaborator-info
+  [user-id repo-id role]
+  {:id           (uuid)
+   :version      1
+   :created_time (now-timestamp)
+   :repo_id      repo-id
+   :user_id      user-id
+   :role         role})
+
+(defn insert-repo-collaborator!
+  [info]
+  (insert! db-spec
+           repository-collaborator-table-name
+           info))
 
 (defn create-repo!
   [repo]
