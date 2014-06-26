@@ -158,9 +158,6 @@ public class GitService {
         RevTree curRevTree = tree;
         boolean ended = false;
         do {
-            if (ended) {
-                break;
-            }
             if (curTree.getPath().equals(path)) {
                 ended = true;
             }
@@ -263,8 +260,7 @@ public class GitService {
         ObjectLoader loader = git.getRepository().open(objectId);
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         loader.copyTo(byteArrayOutputStream);
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
-        return byteArrayInputStream;
+        return new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
     }
 
     /**

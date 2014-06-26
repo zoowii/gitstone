@@ -4,7 +4,8 @@
            (org.eclipse.jgit.api Git)
            (java.util ArrayList)
            (com.zoowii.util FileUtil StringUtil)
-           (org.apache.commons.lang StringUtils))
+           (org.apache.commons.lang StringUtils)
+           (com.zoowii.gitstone Settings))
   (:require [hiccup.core :refer [html]]
             [hiccup.util :refer [escape-html]]
             [hiccup.element :refer [link-to ordered-list unordered-list image]]
@@ -60,6 +61,42 @@
     (if cur-branch-name
       (view-path-content req res username repo-name path git cur-branch-name branch-names last-commit tree)
       (display-empty-repo req res username repo-name))))
+
+(defn index
+  "浏览repo的首页"
+  [req res]
+  (let [owner-name (.getParam req "user")
+        repo-name (.getParam req "repo")
+        repo-path (Settings/getRepoPath owner-name repo-name)
+        git-service (GitService/getInstance)
+        git (.getGitRepo git-service repo-path)
+        branch-names (.getBranchNames git-service git)
+        default-branch-name (repo-dao/default-branch-of-repo-by-name owner-name repo-name)
+        default-branch-name (if default-branch-name default-branch-name "master")
+        cur-branch-name (if (and (not (nil? branch-names)) (seq branch-names))
+                          (first branch-names))
+        path ""]
+    (view-path req res owner-name repo-name git-service git cur-branch-name path)))
+
+(defn view-path-page
+  "流量repo的某个path的页面"
+  [req res]
+  (let [owner-name (.getParam req "user")
+        repo-name (.getParam req "repo")
+        cur-branch-name (.getParam req "branch")
+        path (.getParam req "path")
+        path (if (nil? path) "" path)
+        path (if (.startsWith path "/")
+               (.substring path 1)
+               path)
+        repo-path (Settings/getRepoPath owner-name repo-name)
+        git-service (GitService/getInstance)
+        git (.getGitRepo git-service repo-path)
+        branch-names (.getBranchNames git-service git)]
+    (if (or (empty? branch-names)
+            (not (.contains branch-names cur-branch-name)))
+      (str "Can't find branch " cur-branch-name " in repo " owner-name "/" repo-name)
+      (view-path req res owner-name repo-name git-service git cur-branch-name path))))
 
 (defn create-issue-page
   [req res]
@@ -126,3 +163,43 @@
         (let [collaborator-mapping (db/new-repo-collaborator-info (:id user) (:id repo) role)
               _ (db/insert-repo-collaborator! collaborator-mapping)]
           (web/redirect res (web/url-for "git-collaborators" (:owner_name repo) (:name repo))))))))
+
+(defn settings-options-page
+  "设置Options页面"
+  [req res]
+  (let [owner-name (.getParam req "user")
+        repo-name (.getParam req "repo")
+        repo-path (Settings/getRepoPath owner-name repo-name)
+        git-service (GitService/getInstance)
+        git (.getGitRepo git-service repo-path)
+        branch-names (vec (.getBranchNames git-service git))
+        branch-names (if (empty? branch-names)
+                       (cons "master" branch-names)
+                       branch-names)]
+    (view-repo-settings-options req res owner-name repo-name branch-names)))
+
+(defn settings-danger-zone-page
+  "危险的Settings操作界面"
+  [req res]
+  (let [owner-name (.getParam req "user")
+        repo-name (.getParam req "repo")]
+    (view-repo-settings-danger-zone req res owner-name repo-name)))
+
+(defn update-settings-options-handler
+  "修改设置的Options"
+  [req res]
+  (let [owner-name (.getParam req "user")
+        repo-name (.getParam req "repo")
+        description (.getPostParam req "description")
+        default-branch (.getPostParam req "default_branch")
+        is-private (.getBoolPostParam req "is_private" true)]
+    (repo-dao/update-repo-settings! owner-name repo-name description default-branch is-private)
+    (.ajaxSuccess res "update repo settings successfully!")))
+
+(defn delete-repo-handler
+  "删除repo"
+  [req res]
+  (let [owner-name (.getParam req "user")
+        repo-name (.getParam req "repo")]
+    (repo-dao/del-repo-by-name! owner-name repo-name)
+    (.ajaxSuccess res (str "Delete repo " owner-name "/" repo-name " successfully!"))))

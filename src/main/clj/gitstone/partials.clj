@@ -52,6 +52,10 @@
               {:class "active"}
               {})
         [:a {:href (web/url-for "git_view_index" username repo-name)} "Code"]]
+       [:li (if (= active-module "commits")
+              {:class "active"}
+              {})
+        [:a {:href "#"} "Commits"]]
        [:li (if (= active-module "issues")
               {:class "active"}
               {})

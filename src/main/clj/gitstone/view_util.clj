@@ -36,11 +36,28 @@
   ([handler redirect-url-fn]
    (fn [^HttpRequest req ^HttpResponse res]
      (let [cur-user (web/current-user req)
+           owner-name (.getParam req "user")
            repo-name (.getParam req "repo")
-           repo (db/find-repo-by-name-and-user repo-name cur-user)]
+           repo (db/find-repo-by-name-and-user repo-name owner-name)]
        (if (not repo)
          (web/redirect res (redirect-url-fn))
          (if (not (repo-dao/can-access-repo repo cur-user))
+           (web/redirect res (redirect-url-fn))
+           (handler req res)))))))
+
+(defn asset-can-read-repo-wrapper
+  "确保请求的repo存在且当前用户有权限读取"                                   ;; TODO: 根据是否是AJAX请求来判断返回格式
+  ([handler]
+   (asset-can-read-repo-wrapper handler #(web/url-for "index")))
+  ([handler redirect-url-fn]
+   (fn [^HttpRequest req ^HttpResponse res]
+     (let [cur-user (web/current-user req)
+           owner-name (.getParam req "user")
+           repo-name (.getParam req "repo")
+           repo (db/find-repo-by-name-and-user repo-name owner-name)]
+       (if (not repo)
+         (web/redirect res (redirect-url-fn))
+         (if (not (repo-dao/can-read-repo? repo cur-user))
            (web/redirect res (redirect-url-fn))
            (handler req res)))))))
 
@@ -51,8 +68,9 @@
   ([handler redirect-url-fn]
    (fn [^HttpRequest req ^HttpResponse res]
      (let [cur-user (web/current-user req)
+           owner-name (.getParam req "user")
            repo-name (.getParam req "repo")
-           repo (db/find-repo-by-name-and-user repo-name cur-user)]
+           repo (db/find-repo-by-name-and-user repo-name owner-name)]
        (if (not repo)
          (web/redirect res (redirect-url-fn))
          (if (not (repo-dao/can-admin-repo repo cur-user))
@@ -71,6 +89,12 @@
   (-> handler
       response-wrapper
       asset-can-access-repo-wrapper))
+
+(defn repo-read-required-response-wrapper
+  [handler]
+  (-> handler
+      response-wrapper
+      asset-can-read-repo-wrapper))
 
 (defn repo-admin-required-response-wrapper
   [handler]
@@ -91,6 +115,8 @@
       asset-admin-wrapper))
 
 (def repo-access-wrapper repo-access-required-response-wrapper)
+
+(def repo-read-wrapper repo-read-required-response-wrapper)
 
 (def repo-admin-wrapper repo-admin-required-response-wrapper)
 

@@ -1,6 +1,7 @@
 package com.zoowii.gitstone.git;
 
 import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.TreeWalk;
@@ -16,6 +17,7 @@ public class GitTreeItem {
     private String name = null;
     private String path = null;
     private RevTree revTree = null;
+    private RevWalk revWalk = null;
 
     public RevTree getRevTree() {
         return revTree;
@@ -29,6 +31,7 @@ public class GitTreeItem {
     }
 
     public GitTreeItem(RevWalk revWalk, TreeWalk treeWalk) throws IOException {
+        this.revWalk = revWalk;
         this.isTree = treeWalk.isSubtree();
         this.objectId = treeWalk.getObjectId(0);
         this.name = treeWalk.getNameString();
@@ -83,4 +86,22 @@ public class GitTreeItem {
     public void setObjectId(ObjectId objectId) {
         this.objectId = objectId;
     }
+
+    /**
+     * TODO: 这个有错
+     */
+    public RevCommit getCommit() {
+        try {
+            return revWalk.parseCommit(objectId);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public ObjectId getCommitId() {
+        RevCommit commit = getCommit();
+        return commit != null ? commit.getId() : null;
+    }
+
 }

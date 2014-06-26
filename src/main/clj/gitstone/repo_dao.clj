@@ -22,6 +22,10 @@
        (or (= true (:is_private repo))
            (pos? (:is_private repo)))))
 
+(defn repo-public?
+  [repo]
+  (not (is-repo-private repo)))
+
 (defn can-admin-repo
   "判断用户是否有某个repo的管理权限"
   [repo user]
@@ -36,8 +40,14 @@
   TODO: 如果repo所有者是一个group,那么即使是私有repo也是可以访问的"
   [repo user]
   (when repo
-    (or (not (is-repo-private repo))
+    (or (repo-public? repo)
         (can-admin-repo repo user))))
+
+(defn can-read-repo?
+  [repo user]
+  (when repo
+    (or (repo-public? repo)
+        (can-access-repo repo user))))
 
 (defn default-branch-of-repo-by-name
   [owner-name repo-name]

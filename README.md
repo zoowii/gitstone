@@ -31,6 +31,7 @@ Another Github clone implemented by Java and Clojure
 * Pull Requests
 * log activites
 * Wiki
-* view commit
+* view commits and code and diff in commits
 * 对其他数据库比如MySQL, PostgreSQL, H2等的支持
 * 各种分页和表单验证,错误和成功信息提示功能
+* milestone功能, 还有issues功能的完善(分配给各个协作者,标记label等)
