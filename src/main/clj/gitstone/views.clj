@@ -16,7 +16,7 @@
             [gitstone.templates.site :as site-tmpl]))
 
 (defn index-page
-  [^HttpRequest req ^HttpResponse res]
+  [req res]
   (let [cur-user (web/current-user req)
         limit (.getIntParam req "limit" 10)
         offset (.getIntParam req "offset" 0)
@@ -26,7 +26,7 @@
     (site-tmpl/index-tmpl req res repos)))
 
 (defn create-repo
-  [^HttpRequest req ^HttpResponse res]
+  [req res]
   (let [user (web/current-user req)
         name (.getPostParam req "name")
         description (.getPostParam req "description")
@@ -52,64 +52,13 @@
         (web/redirect res (web/url-for "git_view_index" (:username user) (:name repo)))))))
 
 (defn new-repo-page
-  ;; login required. TODO
-  [^HttpRequest req ^HttpResponse res]
-  (website-layout
-    (web/current-user req) "New Git Repo"
-    (html
-      [:div {:class "row main-content"}
-       (horizontal-form
-         (html
-           (form-group
-             (html
-               [:label "Repository Name"]
-               (form-div
-                 (input-field {:type "text" :placeholder "Repository Name" :required "required"} "name"))))
-           (form-group
-             (html
-               [:label "Description"]
-               (form-div
-                 (input-field {:type "text" :placeholder "Description"} "description"))))
-           [:br]
-           [:div {:class "checkbox"}
-            [:label
-             [:input {:type "checkbox" :name "is_private"}]
-             [:span {:class "strong"}
-              "Private Repository?"]]]
-           (form-group
-             (form-whole-div
-               (success-btn "Create Repository"))))
-         (web/url-for "new-repo")
-         "POST"
-         ""
-         {:class "new-repository-form"})])
-    "new-repo"))
+  [req res]
+  (site-tmpl/new-repo-tmpl req res))
 
 
 (defn login-page
-  [^HttpRequest req ^HttpResponse res]
-  (website-layout
-    (web/current-user req) "Login"
-    (html
-      [:div {:class "row main-content"}
-       (horizontal-form
-         (html
-           (form-group
-             (html
-               (form-label "Username")
-               (form-div
-                 (input-field {:type "text" :placeholder "Username" :required "required"} "username"))))
-           (form-group
-             (html
-               (form-label "Password")
-               (form-div
-                 (input-field {:type "password" :placeholder "Password" :required "required"} "password"))))
-           (form-group
-             (form-whole-div
-               (default-btn "Login"))))
-         (web/url-for "login")
-         "POST")])
-    "login"))
+  [req res]
+  (site-tmpl/login-tmpl req res))
 
 (defn login
   [^HttpRequest req ^HttpResponse res]
@@ -155,145 +104,29 @@
         (user-dao/add-user-change-log! cur-user)
         (web/redirect res (web/url-for "profile"))))))
 
-(defn- edit-profile-panel
-  [cur-user]
+(defn logout
+  [req res]
+  (.clearSession req)
+  (web/redirect res (web/url-for "index")))
+
+(defn not-found-page
+  [req res]
   (html
-    (ui/horizontal-form
-      (html
-        (ui/simple-form-group
-          (ui/form-label "New Password")
-          (ui/form-div
-            (ui/input-field {:required "required"
-                             :type     "password"}
-                            "password")))
-        (ui/simple-form-group
-          (ui/form-whole-div
-            (ui/danger-btn "Change Password"))))
-      (web/url-for "edit-profile")
-      :POST)))
+    [:head
+     [:meta {:charset "UTF-8"}]]
+    [:body
+     [:h1 "404~~~~你家人知道吗?"]]))
 
 (defn profile
-  [^HttpRequest req ^HttpResponse res]
+  [req res]
   (let [cur-user (web/current-user req)
         repos (db/find-repos-of-user cur-user 0 100)]
-    (website-layout
-      cur-user "profile"
-      (html
-        [:div {:class "row main-content"}
-         [:div {:class "col-sm-4"}
-          [:div {:class "account-image"}
-           [:img {:src   (:image cur-user)
-                  :alt   "..."
-                  :class "img-thumbnail"}]]
-          [:h4 (:username cur-user)]
-          [:span {:class "glyphicon glyphicon-user"}]
-          [:span "Joined @"]
-          [:span (format-date (Date. (:created_time cur-user)))]]
-         [:div {:class "col-sm-8"}
-          [:ul {:class "nav nav-tabs"}
-           [:li {:class "active"}
-            [:a {:href        "#repositories-area"
-                 :data-toggle "tab"}
-             "Repositories"]]
-           [:li
-            [:a {:href        "#profile"
-                 :data-toggle "tab"}
-             "Organizations"]]
-           [:li
-            [:a {:href        "#messages"
-                 :data-toggle "tab"}
-             "Public Activities"]]
-           [:li
-            [:a {:href        "#edit-profile"
-                 :data-toggle "tab"}
-             "Edit Profile"]]]
-          [:div {:class "tab-content"}
-           [:div {:class "tab-pane active"
-                  :id    "repositories-area"}
-            [:ul {:class "list-group"}
-             (for [repo repos]
-               [:li {:class "list-group-item"}
-                [:span {:class "badge"} "Star 0"]
-                [:span {:class "badge"} "Fork 0"]
-                [:a {:href (web/url-for "git_view_index" (:owner_name repo) (:name repo))}
-                 [:h4 (escape-html (:name repo))]]
-                [:pre (escape-html (:description repo))]])]]
-           [:div {:class "tab-pane"
-                  :id    "profile"}
-            "..."]
-           [:div {:class "tab-pane"
-                  :id    "messages"}
-            "..."]
-           [:div {:class "tab-pane"
-                  :id    "edit-profile"}
-            (edit-profile-panel cur-user)]]]]))))
+    (site-tmpl/profile-tmpl req res cur-user repos)))
 
 (defn new-user-page
   [req res]
-  (web/response
-    res
-    (website-layout
-      (web/current-user req) "new-user-page"
-      (if (not (user-dao/is-admin-user-req req))
-        (web/redirect res (web/url-for "login_page"))
-        (html
-          [:div {:class "row main-content"}
-           [:h4 "New User"]
-           (ui/horizontal-form
-             (html
-               (ui/simple-form-group
-                 (ui/form-label "User Name")
-                 (ui/input-field {:type     "text"
-                                  :required "required"}
-                                 "username"))
-               (ui/simple-form-group
-                 (ui/form-label "Email")
-                 (ui/input-field {:type     "email"
-                                  :required "required"}
-                                 "email"))
-               (ui/simple-form-group
-                 (ui/form-label "Password")
-                 (ui/input-field {:type     "password"
-                                  :required "required"}
-                                 "password"))
-               (ui/form-whole-div
-                 (ui/default-btn "Create User"
-                                 {:type "submit"})))
-             (web/url-for "admin-new-user")
-             :POST)])))))
+  (site-tmpl/new-user-tmpl req res))
 
 (defn user-list-page
   [req res]
-  (web/response
-    res
-    (website-layout
-      (web/current-user req) "user-list"
-      (if (not (user-dao/is-admin-user-req req))
-        (web/redirect res (web/url-for "login_page"))
-        (let [users (db/find-users 0 100)]
-          (html
-            [:div {:class "row main-content"}
-             [:div {:class "panel panel-primary"}
-              [:div {:class "panel-heading"}
-               "Managing Users"]
-              [:div {:class "panel-body"}
-               [:div {:class "btn-group"}
-                (ui/default-link "New User" (web/url-for "admin-new-user-page"))
-                (ui/default-btn "New Group")]]
-              [:table {:class "table table-bordered table-stripped"}
-               [:thead
-                [:th "ID"]
-                [:th "Name"]
-                [:th "Role"]
-                [:th "Join Time"]
-                [:th "Type"]]
-               [:tbody
-                (for [user users]
-                  [:tr
-                   [:td (:id user)]
-                   [:td (:username user)]
-                   [:td (:role user)]
-                   [:td (format-date (Date. (:created_time user)))]
-                   [:td (if (user-dao/is-group-account user)
-                          "Group"
-                          "User")]])]]]]))))))
+  (site-tmpl/user-list-tmpl req res))

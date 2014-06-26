@@ -186,3 +186,20 @@
             [:td (util/format-date (Date. (:last_updated_time issue))
                                    "yyyy-MM-dd HH:mm:ss"
                                    util/zh-cn-time-zone)]])]]])))
+
+(defn edit-profile-panel
+  [cur-user]
+  (html
+    (ui/horizontal-form
+      (html
+        (ui/simple-form-group
+          (ui/form-label "New Password")
+          (ui/form-div
+            (ui/input-field {:required "required"
+                             :type     "password"}
+                            "password")))
+        (ui/simple-form-group
+          (ui/form-whole-div
+            (ui/danger-btn "Change Password"))))
+      (web/url-for "edit-profile")
+      :POST)))

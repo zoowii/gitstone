@@ -51,7 +51,7 @@
     (string? out)
     {:body         out
      :status       200
-     :content-type "text/html; charset-UTF8"}
+     :content-type "text/html; charset=UTF8"}
     (map? out)
     out
     :else

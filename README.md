@@ -31,7 +31,6 @@ Another Github clone implemented by Java and Clojure
 * Pull Requests
 * log activites
 * Wiki
-* 把检查访问权限的部分抽离出来,把hiccup模板部分抽离出来
 * view commit
 * 对其他数据库比如MySQL, PostgreSQL, H2等的支持
 * 各种分页和表单验证,错误和成功信息提示功能

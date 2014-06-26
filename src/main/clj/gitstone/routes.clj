@@ -1,7 +1,6 @@
 (ns gitstone.routes
   (:import (com.zoowii.mvc.handlers StaticFileHandler)
-           (com.zoowii.gitstone.git GitHandler GitViewHandler)
-           (com.zoowii.gitstone.handlers SiteHandler))
+           (com.zoowii.gitstone.git GitHandler GitViewHandler))
   (:use any-route.core
         any-route.http)
   (:require [gitstone.views :as views]
@@ -59,9 +58,9 @@
                       (POST "/issues/create" git-views/create-issue-handler "git-create-issues-handler")
                       (GET "" [GitViewHandler "index"] "git_view_index")])
 
-(def admin-routes [(GET "/users" views/user-list-page "admin-user-list")
-                   (GET "/new_user" views/new-user-page "admin-new-user-page")
-                   (POST "/new_user" views/admin-new-user "admin-new-user")])
+(def admin-routes [(GET "/users" (view-util/admin-wrapper views/user-list-page) "admin-user-list")
+                   (GET "/new_user" (view-util/admin-wrapper views/new-user-page) "admin-new-user-page")
+                   (POST "/new_user" (view-util/admin-required-response-wrapper views/admin-new-user) "admin-new-user")])
 
 (defn test-page
   [req res]
@@ -75,16 +74,16 @@
 ;; 暂时匿名http路由有BUG
 (defroutes routes
            (GET "/static/:*path" [StaticFileHandler "handleStaticFile"] "static-file")
-           (GET "/" [SiteHandler "index"] "index")
-           (GET "/login" [SiteHandler "loginPage"] "login_page")
-           (POST "/login" [SiteHandler "login"] "login")
-           (ANY "/logout" [SiteHandler "logout"] "logout")
-           (GET "/new_repo" [SiteHandler "createRepoPage"] "new-repo-page")
-           (GET "/profile" [SiteHandler "profile"] "profile")
-           (POST "/change_password" views/edit-profile "edit-profile")
-           (POST "/new_repo" [SiteHandler "createRepo"] "new-repo")
+           (GET "/" (view-util/login-wrapper views/index-page) "index")
+           (GET "/login" (view-util/response-wrapper views/login-page) "login_page")
+           (POST "/login" views/login "login")
+           (ANY "/logout" views/logout "logout")
+           (GET "/new_repo" (view-util/login-wrapper views/new-repo-page) "new-repo-page")
+           (GET "/profile" (view-util/login-wrapper views/profile) "profile")
+           (POST "/change_password" (view-util/login-wrapper views/edit-profile) "edit-profile")
+           (POST "/new_repo" (view-util/login-wrapper views/create-repo) "new-repo")
            (context "/test" test-routes)
            (context "/admin" admin-routes)
            (context "/git/:user/:repo" git-routes)
            (context "/:user/:repo" git-view-routes)         ;; 因为这个路由的关系,上面路由url中开头的单词都不能作为用户名 TODO
-           (ANY "/:*path" [SiteHandler "page404"] "page404"))
+           (ANY "/:*path" (view-util/response-wrapper views/not-found-page) "page404"))
