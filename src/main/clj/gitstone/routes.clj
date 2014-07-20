@@ -7,31 +7,6 @@
             [gitstone.git-views :as git-views]
             [gitstone.view-util :as view-util]))
 
-(defn GET
-  [pattern handler route-name]
-  (http-route :GET pattern handler route-name))
-
-(defn POST
-  [pattern handler route-name]
-  (http-route :POST pattern handler route-name))
-
-(defn ANY
-  [pattern handler route-name]
-  (http-route :ANY pattern handler route-name))
-
-(defmacro defroutes
-  "定义路由表"
-  [name & body]
-  `(def ~name (, make-route-table [~@body])))
-
-(defn url-for
-  [routes-table route-name params]
-  (apply reverse-in-http-route-table (cons routes-table (cons route-name (vec params)))))
-
-(def find-route http-route-table-match)
-
-(def context context-route)
-
 (def git-routes [(GET "" [GitHandler "cloneDummy"] "git-url")
                  (GET "/HEAD" [GitHandler "head"] "git_head")
                  (GET "/info/refs" [GitHandler "infoRefs"] "git_info_refs")
@@ -67,11 +42,10 @@
   (.append res
            "hello from clojure fn"))
 
-(def test-routes [(GET "/fn" test-page "test-fn")
-                  (GET "/str" "hi from clojure str" "test-str")
-                  (GET "/map" {:status 200 :headers {:Content-Type "text/xml; charset=UTF-8"} :body "hi from clojure map"} "test-map")])
+(def test-routes [(GET "/fn" test-page)
+                  (GET "/str" "hi from clojure str")
+                  (GET "/map" {:status 200 :headers {:Content-Type "text/xml; charset=UTF-8"} :body "hi from clojure map"})])
 
-;; 暂时匿名http路由有BUG
 (defroutes routes
            (GET "/static/:*path" [StaticFileHandler "handleStaticFile"] "static-file")
            (GET "/" (view-util/login-wrapper views/index-page) "index")

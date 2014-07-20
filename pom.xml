@@ -63,11 +63,6 @@
     </build>
     <dependencies>
         <dependency>
-            <groupId>com.huaban</groupId>
-            <artifactId>jieba-analysis</artifactId>
-            <version>0.0.2</version>
-        </dependency>
-        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.4</version>
@@ -104,11 +99,6 @@
             <version>4.11</version>
         </dependency>
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>1.4.177</version>
-        </dependency>
-        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.30</version>
@@ -127,11 +117,6 @@
             <groupId>org.clojure</groupId>
             <artifactId>java.jdbc</artifactId>
             <version>0.3.3</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-dbutils</groupId>
-            <artifactId>commons-dbutils</artifactId>
-            <version>1.5</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
@@ -182,6 +167,11 @@
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
             <version>1.1.41</version>
+        </dependency>
+        <dependency>
+            <groupId>any-route</groupId>
+            <artifactId>any-route</artifactId>
+            <version>0.1.2</version>
         </dependency>
     </dependencies>
 </project>

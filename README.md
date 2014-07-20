@@ -17,6 +17,7 @@ Another Github clone implemented by Java and Clojure
 
 ## TODO
 
+* 用AngularJS把前端重构
 * 提供ssh协议访问(自己实现或者修改ssh server, 可以参考twisted的实现)
 * 路由增加before/after actions
 * 很多异常处理
