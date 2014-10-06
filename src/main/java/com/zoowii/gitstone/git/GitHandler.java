@@ -23,34 +23,34 @@ public class GitHandler extends GitBaseHandler {
         response.append("you should clone git repo using git client");
     }
 
-    private static void sendFile(HttpRequest request, HttpResponse response, String repoPath, String path, String mimeType) throws IOException {
+    private void sendFile(String repoPath, String path, String mimeType) throws IOException {
         final String absPath = repoPath + path;
         if (!FileUtil.isSubPath(absPath, repoPath)) {
-            sendNoAccess(request, response);
+            sendNoAccess();
             return;
         }
         if (!FileUtil.isReadable(absPath)) {
-            sendNotFound(request, response);
+            sendNotFound();
             return;
         }
-        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+        if (!checkBasicAuth(request(), response(), repoPath, READ_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
-        response.setStatus(200);
-        response.setContentType(mimeType);
-        response.setHeader("Last-Modified", FileUtil.getLastModifiedDate(absPath).toString());
-        AsyncContext asyncContext = request.startAsync();
+        response().setStatus(200);
+        response().setContentType(mimeType);
+        response().setHeader("Last-Modified", FileUtil.getLastModifiedDate(absPath).toString());
+        AsyncContext asyncContext = request().startAsync();
         new Thread(new SendFileExecutor(asyncContext, absPath)).start();
-        response.flushBuffer();
+        response().flushBuffer();
     }
 
-    private static void sendTextFile(HttpRequest request, HttpResponse response, String repoPath, String path) throws IOException {
-        sendFile(request, response, repoPath, path, PLAIN_TEXT_MIME_TYPE);
+    private void sendTextFile(String repoPath, String path) throws IOException {
+        sendFile(repoPath, path, PLAIN_TEXT_MIME_TYPE);
     }
 
-    private static String getServiceType(HttpRequest request, HttpResponse response) throws IOException {
-        String serviceType = request.getParameter("service");
+    private String getServiceType() throws IOException {
+        String serviceType = request().getParameter("service");
         if (serviceType == null) {
             return null;
         }
@@ -60,23 +60,23 @@ public class GitHandler extends GitBaseHandler {
         return serviceType.substring("git-".length());
     }
 
-    public static void head(HttpRequest request, HttpResponse response) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+    public void head() throws IOException {
+        String repoPath = getGitRepoPath(request());
+        if (!checkBasicAuth(request(), response(), repoPath, READ_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
         logger.info("get head of " + repoPath);
         String path = "/HEAD";
-        sendTextFile(request, response, repoPath, path);
+        sendTextFile(repoPath, path);
     }
 
     /**
      * 当获取inf-refs方式不合法时,比如直接浏览器获取,则返回dummy消息
      */
-    private static void dumbInfoRefs(HttpRequest request, HttpResponse response) throws IOException {
+    private void dumbInfoRefs() throws IOException {
         //gitService.updateServerInfo();
-        response.append("dumb client detected");
+        response().append("dumb client detected");
     }
 
     private static String packetWrite(String str) {
@@ -87,15 +87,15 @@ public class GitHandler extends GitBaseHandler {
         return l4StrRjust + str;
     }
 
-    public static void infoRefs(HttpRequest request, HttpResponse response) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+    public void infoRefs() throws IOException {
+        String repoPath = getGitRepoPath(request());
+        if (!checkBasicAuth(request(), response(), repoPath, READ_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
-        String serviceName = getServiceType(request, response);
-        if (serviceName == null || !hasAccess(request, response, repoPath, serviceName, false)) {
-            dumbInfoRefs(request, response);
+        String serviceName = getServiceType();
+        if (serviceName == null || !hasAccess(request(), response(), repoPath, serviceName, false)) {
+            dumbInfoRefs();
             return;
         }
         String cmd = "git " + serviceName + " --stateless-rpc --advertise-refs " + repoPath;
@@ -103,96 +103,96 @@ public class GitHandler extends GitBaseHandler {
         prelude = packetWrite(prelude) + "" + PACKET_FLUSH;
         try {
             InputStream processResultIn = gitService.command(cmd, repoPath, null);
-            response.setStatus(200);
-            response.setContentType("application/x-git-" + serviceName + "-advertisement");
-            sendNoCache(request, response);
-            AsyncContext asyncContext = request.startAsync();
+            response().setStatus(200);
+            response().setContentType("application/x-git-" + serviceName + "-advertisement");
+            sendNoCache(request(), response());
+            AsyncContext asyncContext = request().startAsync();
             new Thread(new SendInfoRefsExecutor(asyncContext, processResultIn, prelude)).start();
-            response.flushBuffer();
+            response().flushBuffer();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    public static void idxFile(HttpRequest request, HttpResponse response) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+    public void idxFile() throws IOException {
+        String repoPath = getGitRepoPath(request());
+        if (!checkBasicAuth(request(), response(), repoPath, READ_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
-        String path = "/objects/pack/pack-" + request.getParam("path") + ".idx";
-        sendCacheForever(request, response);
-        sendFile(request, response, repoPath, path, "application/x-git-packed-objects-toc");
+        String path = "/objects/pack/pack-" + request().getParam("path") + ".idx";
+        sendCacheForever(request(), response());
+        sendFile(repoPath, path, "application/x-git-packed-objects-toc");
     }
 
-    public static void packFile(HttpRequest request, HttpResponse response) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+    public void packFile() throws IOException {
+        String repoPath = getGitRepoPath(request());
+        if (!checkBasicAuth(request(), response(), repoPath, READ_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
-        String path = "/objects/pack/pack-" + request.getParam("path") + ".pack";
-        sendCacheForever(request, response);
-        sendFile(request, response, repoPath, path, "application/x-git-packed-objects");
+        String path = "/objects/pack/pack-" + request().getParam("path") + ".pack";
+        sendCacheForever(request(), response());
+        sendFile(repoPath, path, "application/x-git-packed-objects");
     }
 
-    public static void infoPacks(HttpRequest request, HttpResponse response) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+    public void infoPacks() throws IOException {
+        String repoPath = getGitRepoPath(request());
+        if (!checkBasicAuth(request(), response(), repoPath, READ_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
         String path = "/objects/info/packs";
-        sendNoCache(request, response);
-        sendFile(request, response, repoPath, path, "text/plain; charset=utf-8");
+        sendNoCache(request(), response());
+        sendFile(repoPath, path, "text/plain; charset=utf-8");
     }
 
-    public static void textInfo(HttpRequest request, HttpResponse response) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+    public void textInfo() throws IOException {
+        String repoPath = getGitRepoPath(request());
+        if (!checkBasicAuth(request(), response(), repoPath, READ_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
-        String path = "/objects/info/" + request.getParam("path");
-        sendNoAccess(request, response);
-        sendFile(request, response, repoPath, path, PLAIN_TEXT_MIME_TYPE);
+        String path = "/objects/info/" + request().getParam("path");
+        sendNoAccess();
+        sendFile(repoPath, path, PLAIN_TEXT_MIME_TYPE);
     }
 
-    public static void looseObject(HttpRequest request, HttpResponse response) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+    public void looseObject() throws IOException {
+        String repoPath = getGitRepoPath(request());
+        if (!checkBasicAuth(request(), response(), repoPath, READ_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
-        String path = "/objects/info/" + request.getParam("path");
-        sendCacheForever(request, response);
-        sendFile(request, response, repoPath, path, "application/x-git-loose-object");
+        String path = "/objects/info/" + request().getParam("path");
+        sendCacheForever(request(), response());
+        sendFile(repoPath, path, "application/x-git-loose-object");
     }
 
-    private static void gitRpcService(HttpRequest request, HttpResponse response, String serviceName) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        response.setStatus(200);
-        response.setContentType("application/x-git-" + serviceName + "-result");
-        AsyncContext asyncContext = request.startAsync();
+    private void gitRpcService(String serviceName) throws IOException {
+        String repoPath = getGitRepoPath(request());
+        response().setStatus(200);
+        response().setContentType("application/x-git-" + serviceName + "-result");
+        AsyncContext asyncContext = request().startAsync();
         new Thread(new GitRpcExecutor(gitService, asyncContext, repoPath, serviceName)).start();
-        response.flushBuffer();
+        response().flushBuffer();
     }
 
-    public static void uploadPack(HttpRequest request, HttpResponse response) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        if (!checkBasicAuth(request, response, repoPath, READ_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+    public void uploadPack() throws IOException {
+        String repoPath = getGitRepoPath(request());
+        if (!checkBasicAuth(request(), response(), repoPath, READ_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
-        gitRpcService(request, response, UPLOAD_PACK);
+        gitRpcService(UPLOAD_PACK);
     }
 
-    public static void receivePack(HttpRequest request, HttpResponse response) throws IOException {
-        String repoPath = getGitRepoPath(request);
-        if (!checkBasicAuth(request, response, repoPath, WRITE_TYPE)) {
-            sendAuthRequiredOrFailed(request, response);
+    public void receivePack() throws IOException {
+        String repoPath = getGitRepoPath(request());
+        if (!checkBasicAuth(request(), response(), repoPath, WRITE_TYPE)) {
+            sendAuthRequiredOrFailed(request(), response());
             return;
         }
-        gitRpcService(request, response, RECEIVE_PACK);
+        gitRpcService(RECEIVE_PACK);
     }
 }

@@ -1,6 +1,8 @@
 (ns gitstone.routes
   (:import (com.zoowii.mvc.handlers StaticFileHandler)
-           (com.zoowii.gitstone.git GitHandler GitViewHandler))
+           (com.zoowii.gitstone.git GitHandler GitViewHandler)
+           (com.zoowii.gitstone.interceptors AuthInterceptor RequestLogInterceptor)
+           (com.zoowii.mvc.http.middlewares ExceptionPageMiddleWare))
   (:use any-route.core
         any-route.http)
   (:require [gitstone.views :as views]
@@ -59,8 +61,9 @@
            (context "/test" test-routes)
            (context "/admin" admin-routes)
            (context "/git/:user/:repo" git-routes)
-           (context "/:user/:repo" git-view-routes)         ;; 因为这个路由的关系,上面路由url中开头的单词都不能作为用户名 TODO
-           (ANY "/:*path" (view-util/response-wrapper views/not-found-page) "page404"))
+           (context "/:user/:repo" git-view-routes)
+           ;(ANY "/:*path" (view-util/response-wrapper views/not-found-page) "page404")
+           )
 
-(def interceptors [])
-(def middlewares [])
+(def interceptors [(AuthInterceptor.) (RequestLogInterceptor.)])
+(def middlewares [(ExceptionPageMiddleWare.)])

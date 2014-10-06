@@ -6,13 +6,13 @@ import com.zoowii.mvc.http.HttpResponse;
 import java.io.IOException;
 
 public class TestHandler extends AbstractHandler {
-    public static void index(HttpRequest request, HttpResponse response) throws IOException {
-        response.getHttpServletResponse().getWriter().append("hello, test zoowii mvc");
+    public void index() throws IOException {
+        response().getHttpServletResponse().getWriter().append("hello, test zoowii mvc");
     }
 
-    public static void page404(HttpRequest request, HttpResponse response) {
+    public void page404() {
         try {
-            response.append("test 404 page");
+            response().append("test 404 page");
         } catch (IOException e) {
             e.printStackTrace();
         }

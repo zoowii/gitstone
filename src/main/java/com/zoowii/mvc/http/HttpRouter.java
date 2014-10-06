@@ -3,6 +3,7 @@ package com.zoowii.mvc.http;
 import clojure.lang.*;
 import com.google.common.base.Function;
 import com.zoowii.mvc.handlers.RouterNotFoundException;
+import com.zoowii.mvc.http.middlewares.ExceptionPageMiddleWare;
 import com.zoowii.util.*;
 import com.zoowii.mvc.http.handler_callers.*;
 
@@ -20,11 +21,23 @@ import java.util.logging.Logger;
 public class HttpRouter {
     private static String contextPath = null;  // the app context
     private static Logger logger = Logger.getLogger("HttpRouter");
-    private static List<IMiddleWare> middleWares = new ArrayList<IMiddleWare>();
-    private static List<IInterceptor> interceptors = new ArrayList<IInterceptor>();
+    private static final List<IMiddleWare> middleWares = new ArrayList<IMiddleWare>();
+    private static final List<IInterceptor> interceptors = new ArrayList<IInterceptor>();
 
     public static List<IInterceptor> getInterceptors() {
         return interceptors;
+    }
+
+    public static void addInterceptor(IInterceptor interceptor) {
+        synchronized (interceptors) {
+            interceptors.add(interceptor);
+        }
+    }
+
+    public static void addMiddleWare(IMiddleWare middleWare) {
+        synchronized (middleWares) {
+            middleWares.add(middleWare);
+        }
     }
 
     public static String getContextPath() {
@@ -37,18 +50,21 @@ public class HttpRouter {
 
     static {
         // FIXME: add demo interceptors and middlewares
-        interceptors.add(new IInterceptor() {
-            @Override
-            public boolean beforeHandler(HttpContext ctx, Object handlerObj) {
-                logger.info("before handler");
-                return true;
-            }
+//        addInterceptor(new IInterceptor() {
+//            @Override
+//            public boolean beforeHandler(HttpContext ctx, Object handlerObj) {
+//                logger.info("before handler");
+//                return true;
+//            }
+//
+//            @Override
+//            public void afterHandler(HttpContext ctx, Object handlerObj) {
+//                logger.info("after handler");
+//            }
+//        });
+//        addMiddleWare(new ExceptionPageMiddleWare());
 
-            @Override
-            public void afterHandler(HttpContext ctx, Object handlerObj) {
-                logger.info("after handler");
-            }
-        });
+        // 加载路由表
         try {
             RouterLoader.loadRouter("gitstone/routes");
         } catch (IOException e) {

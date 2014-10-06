@@ -28,6 +28,14 @@ public class HttpResponse {
         out.append(content);
     }
 
+    public void safeAppend(CharSequence content) {
+        try {
+            append(content);
+        } catch (IOException e) {
+
+        }
+    }
+
     public void setContentType(String contentType) {
         this.getHttpServletResponse().setContentType(contentType);
         this.contentTypeSettled = true;

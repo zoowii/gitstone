@@ -2,6 +2,7 @@ package com.zoowii.gitstone.git;
 
 import clojure.lang.RT;
 import clojure.lang.Var;
+import com.zoowii.mvc.http.HttpContext;
 import com.zoowii.mvc.http.HttpRequest;
 import com.zoowii.mvc.http.HttpResponse;
 
@@ -33,7 +34,9 @@ public class TestHandler {
         }
     }
 
-    public static void async(HttpRequest request, HttpResponse response) throws IOException {
+    public void async(HttpContext context) throws IOException {
+        HttpRequest request = context.getRequest();
+        HttpResponse response = context.getResponse();
         response.getHttpServletResponse().setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getHttpServletResponse().getWriter();
         out.println("进入 Servlet 的时间：" + new Date() + ".<br/>");
@@ -47,14 +50,14 @@ public class TestHandler {
         out.flush();
     }
 
-    public static void clojureHi(HttpRequest request, HttpResponse response) {
+    public void clojureHi(HttpContext ctx) {
         try {
             RT.load("test/hello");
             Var reload = RT.var("test.hello", "reload-dummy");
             reload.invoke();
             Var sayHi = RT.var("test.hello", "say-hi");
             Object result = sayHi.invoke("zoowii");
-            response.append(result.toString());
+            ctx.getResponse().append(result.toString());
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
@@ -62,9 +65,9 @@ public class TestHandler {
         }
     }
 
-    public static void hello(HttpRequest request, HttpResponse response) throws IOException {
-        response.getHttpServletResponse().setContentType("text/html;charset=utf-8");
-        response.getHttpServletResponse().setStatus(HttpServletResponse.SC_OK);
-        response.getHttpServletResponse().getWriter().println("<h1>Hello World ！" + request.getParam("name") + ", I'm a java servlet </h1>");
+    public void hello(HttpContext ctx) throws IOException {
+        ctx.getResponse().getHttpServletResponse().setContentType("text/html;charset=utf-8");
+        ctx.getResponse().getHttpServletResponse().setStatus(HttpServletResponse.SC_OK);
+        ctx.getResponse().getHttpServletResponse().getWriter().println("<h1>Hello World ！" + ctx.getRequest().getParam("name") + ", I'm a java servlet </h1>");
     }
 }

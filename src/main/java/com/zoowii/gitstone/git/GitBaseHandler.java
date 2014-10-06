@@ -25,14 +25,14 @@ public class GitBaseHandler extends BaseHandler {
     protected static GitService gitService = GitService.getInstance();
     protected static AbstractGitRepoAccessManager gitRepoAccessManager = new AuthedGitRepoAccessManager();
 
-    protected static void sendNoAccess(HttpRequest request, HttpResponse response) throws IOException {
-        response.setContentType(PLAIN_TEXT_MIME_TYPE);
-        response.sendError(403, "Forbidden");
+    protected void sendNoAccess() throws IOException {
+        response().setContentType(PLAIN_TEXT_MIME_TYPE);
+        response().sendError(403, "Forbidden");
     }
 
-    protected static void sendNotFound(HttpRequest request, HttpResponse response) throws IOException {
-        response.setContentType(PLAIN_TEXT_MIME_TYPE);
-        response.sendError(404, "Not Found");
+    protected void sendNotFound() throws IOException {
+        response().setContentType(PLAIN_TEXT_MIME_TYPE);
+        response().sendError(404, "Not Found");
     }
 
     protected static String getGitRepoPath(HttpRequest request) {

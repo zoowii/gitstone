@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
+ * 路由表的路由信息结果有多种,针对每种有不同的调用对应的操作的方式
  * Created by zoowii on 14/10/6.
  */
 public abstract class HandlerCaller {

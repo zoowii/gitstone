@@ -1,5 +1,6 @@
 package com.zoowii.mvc.http.handler_callers;
 
+import com.zoowii.mvc.handlers.AbstractHandler;
 import com.zoowii.mvc.handlers.RouterNotFoundException;
 import com.zoowii.mvc.http.*;
 
@@ -22,9 +23,19 @@ public class JavaMvcControllerCaller extends HandlerCaller {
                         throw new RouterNotFoundException("If you use Java method as handler, you need to specify the class and static method");
                     }
                     Class handlerClass = (Class) handlerArray.get(0);
+                    Object handler = handlerClass.newInstance();
+                    Object[] methodParams;
+                    // TODO: 根据对象的属性,方法的参数,是否static等信息注入属性和参数
+                    if (handler instanceof AbstractHandler) {
+                        AbstractHandler handler1 = (AbstractHandler) handler;
+                        handler1.setContext(ctx);
+                        methodParams = new Object[0];
+                    } else {
+                        methodParams = new Object[1];
+                    }
                     String methodName = (String) handlerArray.get(1);
-                    Method handlerMethod = handlerClass.getDeclaredMethod(methodName, HttpRequest.class, HttpResponse.class);
-                    handlerMethod.invoke(handlerClass, ctx.getRequest(), ctx.getResponse());
+                    Method handlerMethod = handlerClass.getDeclaredMethod(methodName);
+                    handlerMethod.invoke(handler, methodParams);
                     chain.processNext(ctx, handlerObj);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
