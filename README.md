@@ -14,12 +14,16 @@ Another Github clone implemented by Java and Clojure
 
 * 默认账号root/root,默认所有数据和git repos都放到$HOME/gitstone目录下
 
+## DOING
+
+* 用AngularJS把前端重构
+* 重构MVC
+* 增加interceptors和middlewares功能
+* 迁移到Leiningen2
 
 ## TODO
 
-* 用AngularJS把前端重构
 * 提供ssh协议访问(自己实现或者修改ssh server, 可以参考twisted的实现)
-* 路由增加before/after actions
 * 很多异常处理
 * fix some ugly code, like path join, etc.
 * 把更多代码迁移到clojure,使得java和clojure融合更融洽
@@ -36,4 +40,3 @@ Another Github clone implemented by Java and Clojure
 * 对其他数据库比如MySQL, PostgreSQL, H2等的支持
 * 各种分页和表单验证,错误和成功信息提示功能
 * milestone功能, 还有issues功能的完善(分配给各个协作者,标记label等)
-* 迁移到Leiningen2, 以及把any-route抽离出来
