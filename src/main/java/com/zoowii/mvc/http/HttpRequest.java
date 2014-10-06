@@ -213,4 +213,8 @@ public class HttpRequest {
         }
     }
 
+    public String getPathInfo() {
+        return this.getHttpServletRequest().getPathInfo();
+    }
+
 }

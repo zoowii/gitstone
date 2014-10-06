@@ -14,6 +14,17 @@ public class ListUtil {
         return result;
     }
 
+    public static <T> List<T> reverse(List<T> source) {
+        if (source == null) {
+            return null;
+        }
+        List<T> result = new ArrayList<T>();
+        for (int i = source.size() - 1; i >= 0; --i) {
+            result.add(source.get(i));
+        }
+        return result;
+    }
+
     public static <T> T first(List<T> source, Function<T, Boolean> fn) {
         for (T item : source) {
             Boolean predResult = fn.apply(item);

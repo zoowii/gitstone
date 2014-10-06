@@ -1,10 +1,10 @@
 package com.zoowii.mvc.http;
 
 import clojure.lang.*;
+import com.google.common.base.Function;
 import com.zoowii.mvc.handlers.RouterNotFoundException;
-import com.zoowii.util.ClojureUtil;
-import com.zoowii.util.FileUtil;
-import com.zoowii.util.Pair;
+import com.zoowii.util.*;
+import com.zoowii.mvc.http.handler_callers.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -13,11 +13,19 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class HttpRouter {
     private static String contextPath = null;  // the app context
     private static Logger logger = Logger.getLogger("HttpRouter");
+    private static List<IMiddleWare> middleWares = new ArrayList<IMiddleWare>();
+    private static List<IInterceptor> interceptors = new ArrayList<IInterceptor>();
+
+    public static List<IInterceptor> getInterceptors() {
+        return interceptors;
+    }
 
     public static String getContextPath() {
         return contextPath;
@@ -28,6 +36,19 @@ public class HttpRouter {
     private static Var urlForFn = null;
 
     static {
+        // FIXME: add demo interceptors and middlewares
+        interceptors.add(new IInterceptor() {
+            @Override
+            public boolean beforeHandler(HttpContext ctx, Object handlerObj) {
+                logger.info("before handler");
+                return true;
+            }
+
+            @Override
+            public void afterHandler(HttpContext ctx, Object handlerObj) {
+                logger.info("after handler");
+            }
+        });
         try {
             RouterLoader.loadRouter("gitstone/routes");
         } catch (IOException e) {
@@ -61,22 +82,46 @@ public class HttpRouter {
         return res != null ? res.toString() : null;
     }
 
+    public static IMiddleWare mergeMiddleWares() {
+        return new IMiddleWare() {
+            @Override
+            public void call(final HttpContext ctx, final Object handlerObj, Callable callable) {
+                Callable finalCallable = callable;
+                for (final IMiddleWare middleWare : middleWares) {
+                    finalCallable = new HolderCallable<Callable>(finalCallable) {
+                        @Override
+                        public Object call() throws Exception {
+                            middleWare.call(ctx, handlerObj, holder);
+                            return null;
+                        }
+                    };
+                }
+                try {
+                    finalCallable.call();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
+    }
+
     public static void submitRequest(HttpRequest request, HttpResponse response) {
+        HttpContext ctx = new HttpContext(request, response);
         if (contextPath == null) {
             contextPath = request.getHttpServletRequest().getContextPath();
         }
-        String pathInfo = request.getHttpServletRequest().getPathInfo();
+        String pathInfo = request.getPathInfo();
         pathInfo = pathInfo.substring(pathInfo.indexOf(getContextPath()), pathInfo.length());
         String requestMethod = request.getHttpServletRequest().getMethod().toUpperCase();
         Keyword reqMethodKeyword = Keyword.intern(requestMethod);
         try {
-            PersistentArrayMap routeResult = (PersistentArrayMap) findRouteFn.invoke(routesTable, reqMethodKeyword, pathInfo);
+            IPersistentMap routeResult = (IPersistentMap) findRouteFn.invoke(routesTable, reqMethodKeyword, pathInfo);
             if (routeResult == null) {
-                response.append("404");
+                new RouteNotFoundHandlerCaller().process(ctx, null);
                 return;
             }
             logger.info(routeResult.toString());
-            ISeq bindings = (ISeq) routeResult.get(Keyword.intern("binding"));
+            ISeq bindings = (ISeq) routeResult.valAt(Keyword.intern("binding"));
             while (bindings != null && bindings.count() > 0) {
                 PersistentVector binding = (PersistentVector) bindings.first();
                 bindings = bindings.next();
@@ -84,73 +129,29 @@ public class HttpRouter {
                 Object paramValue = binding.get(1);
                 request.getParams().add(new Pair<String, Object>(paramName, paramValue));
             }
-            Object handlerObj = routeResult.get(Keyword.intern("handler"));
-            // TODO: 增加before和after filter, 从而可以注入其他功能(需要封装新的Stream代替request和response中的流)
+            Object handlerObj = routeResult.valAt(Keyword.intern("handler"));
+            HandlerCaller handlerCaller;
             if (handlerObj == null) {
-                throw new RouterNotFoundException("Can't find handler for route " + pathInfo);
-            }
-            if (handlerObj instanceof List) {
-                // 如果是一个seq,则代表是[类, 静态方法]的形式,把请求调度过去
-                List handlerArray = (List) handlerObj;
-                if (handlerArray.size() < 2) {
-                    throw new RouterNotFoundException("If you use Java method as handler, you need to specify the class and static method");
-                }
-                Class handlerClass = (Class) handlerArray.get(0);
-                String methodName = (String) handlerArray.get(1);
-                Method handlerMethod = handlerClass.getDeclaredMethod(methodName, HttpRequest.class, HttpResponse.class);
-                handlerMethod.invoke(handlerClass, request, response);
+                handlerCaller = new RouteNotFoundHandlerCaller();
+            } else if (handlerObj instanceof List) {
+                handlerCaller = new JavaMvcControllerCaller(); // TODO: cache it
             } else if (handlerObj instanceof IPersistentMap) {
-                // 如果是一个Clojure的map,这个就表示返回的内容
-                // 格式类似Ring, 为{:status: ..., :headers: ..., :body: str or byte[] or InputStream, :content-type: ...}
-                // :headers的格式为{:header-name or "header-name": value, ... }
-                IPersistentMap map = (IPersistentMap) handlerObj;
-                Object statusObj = map.valAt(Keyword.intern("status"));
-                if (statusObj != null) {
-                    if (statusObj instanceof Long) {
-                        response.setStatus(((Long) statusObj).intValue());
-                    } else if (statusObj instanceof Integer) {
-                        response.setStatus((Integer) statusObj);
-                    }
-                }
-                Object contentTypeObj = map.valAt(Keyword.intern("content-type"));
-                if (contentTypeObj != null && contentTypeObj instanceof String) {
-                    response.setContentType((String) contentTypeObj);
-                }
-                Object headersObj = map.valAt(Keyword.intern("headers"));
-                if (headersObj != null && headersObj instanceof IPersistentMap) {
-                    IPersistentMap headersMap = (IPersistentMap) headersObj;
-                    for (Object entryObj : headersMap) {
-                        MapEntry entry = (MapEntry) entryObj;
-                        Object keyObj = entry.getKey();
-                        Object valueObj = entry.getValue();
-                        String key = ClojureUtil.name(keyObj);
-                        String value = ClojureUtil.name(valueObj);
-                        response.setHeader(key, value);
-                    }
-                }
-                Object bodyObj = map.valAt(Keyword.intern("body"));
-                if (bodyObj != null) {
-                    if (bodyObj instanceof String) {
-                        response.append((String) bodyObj);
-                    } else if (bodyObj instanceof InputStream) {
-                        FileUtil.writeFullyStream((InputStream) bodyObj, response.getOutputStream());
-                    } else if (bodyObj instanceof byte[]) {
-                        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream((byte[]) bodyObj);
-                        FileUtil.writeFullyStream(byteArrayInputStream, response.getOutputStream());
-                    }
-                }
+                handlerCaller = new RingResponseCaller();
             } else if (handlerObj instanceof String) {
-                String str = (String) handlerObj;
-                response.append(str);
+                handlerCaller = new StringResponseCaller();
             } else if (handlerObj instanceof IFn) {
-                // 如果是一个Clojure的函数,就直接用这个函数处理请求
-                IFn fn = (IFn) handlerObj;
-                fn.invoke(request, response);
+                handlerCaller = new ClojureFnCaller();
             } else {
-                throw new RouterNotFoundException("Unsupported handler type for path " + pathInfo);
+                handlerCaller = new UnsupportedHandlerCaller();
             }
+            handlerCaller.process(ctx, handlerObj);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "routes table not found", e);
+            try {
+                new RouteNotFoundHandlerCaller().process(ctx, null);
+            } catch (Exception e2) {
+
+            }
         }
     }
 }

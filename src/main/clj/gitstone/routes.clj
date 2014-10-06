@@ -61,3 +61,6 @@
            (context "/git/:user/:repo" git-routes)
            (context "/:user/:repo" git-view-routes)         ;; 因为这个路由的关系,上面路由url中开头的单词都不能作为用户名 TODO
            (ANY "/:*path" (view-util/response-wrapper views/not-found-page) "page404"))
+
+(def interceptors [])
+(def middlewares [])
